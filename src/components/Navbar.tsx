@@ -35,14 +35,25 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAuthModal }) => {
           {/* Demo account switcher */}
           {isDemoMode && profile && (
             <button
-              onClick={() => switchDemoRole(profile.role === 'trainer' ? 'client' : 'trainer')}
+              onClick={() => {
+                const nextRole = profile.role === 'trainer' ? 'client' : profile.role === 'client' ? 'admin' : 'trainer';
+                switchDemoRole(nextRole);
+              }}
               className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 px-2.5 sm:px-3 py-1.5 rounded-xl transition-all"
-              title="Cambiar rol de usuario (Entrenador / Cliente)"
+              title="Cambiar rol de usuario Demo (Entrenador / Cliente / Administrador)"
             >
-              <ArrowLeftRight className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <ArrowLeftRight className="h-3.5 w-3.5 text-purple-400 shrink-0" />
               <span className="hidden sm:inline text-slate-400">Rol:</span>
-              <span className="font-semibold text-emerald-400 capitalize">
-                {profile.role === 'trainer' ? 'Entrenador' : 'Cliente'}
+              <span
+                className={`font-semibold capitalize ${
+                  profile.role === 'admin'
+                    ? 'text-purple-400'
+                    : profile.role === 'trainer'
+                    ? 'text-emerald-400'
+                    : 'text-teal-400'
+                }`}
+              >
+                {profile.role === 'admin' ? 'Admin' : profile.role === 'trainer' ? 'Entrenador' : 'Cliente'}
               </span>
             </button>
           )}
@@ -52,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAuthModal }) => {
               <div className="flex flex-col items-end hidden lg:flex">
                 <span className="text-xs font-medium text-slate-200 truncate max-w-[140px]">{profile.full_name}</span>
                 <span className="text-[10px] text-slate-400">
-                  {profile.role === 'trainer' ? 'Coach Admin' : 'Cliente'}
+                  {profile.role === 'admin' ? 'Super Administrador' : profile.role === 'trainer' ? 'Coach Entrenador' : 'Cliente'}
                 </span>
               </div>
               <button

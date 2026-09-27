@@ -1,4 +1,4 @@
-export type UserRole = 'trainer' | 'client';
+export type UserRole = 'trainer' | 'client' | 'admin';
 
 export interface Profile {
   id: string;
@@ -10,7 +10,20 @@ export interface Profile {
   medical_history?: string | null;
   goals?: string | null;
   avatar_url?: string | null;
+  is_active?: boolean;
+  deactivation_reason?: string | null;
+  deactivated_at?: string | null;
+  last_login_at?: string | null;
   created_at: string;
+}
+
+export interface MonthlyLoginStat {
+  month: string;
+  year: number;
+  logins: number;
+  unique_users: number;
+  trainers: number;
+  clients: number;
 }
 
 export interface WorkoutExercise {

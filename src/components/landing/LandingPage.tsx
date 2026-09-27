@@ -12,7 +12,8 @@ import {
   Camera,
   Activity,
   Clock,
-  Sparkles
+  Sparkles,
+  Shield
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/database';
@@ -70,6 +71,13 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => switchDemoRole('admin')}
+              className="text-xs bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 px-3 py-1.5 rounded-xl font-medium transition-colors hidden sm:flex items-center gap-1.5"
+            >
+              <Shield className="h-3.5 w-3.5 text-purple-400" />
+              <span>Demo Admin</span>
+            </button>
             <button
               onClick={() => switchDemoRole('trainer')}
               className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl font-medium transition-colors hidden sm:flex items-center gap-1.5"
@@ -190,22 +198,30 @@ export const LandingPage: React.FC = () => {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2 text-center">
                     Acceso Instantáneo de Demostración
                   </span>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
                     <button
                       type="button"
                       onClick={() => switchDemoRole('trainer')}
-                      className="py-2 px-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-medium text-slate-200 flex items-center justify-center gap-1.5 transition-colors"
+                      className="py-2 px-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-[11px] font-medium text-slate-200 flex flex-col items-center justify-center gap-1 transition-colors"
                     >
                       <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                      <span>Coach Demo</span>
+                      <span>Coach</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => switchDemoRole('client')}
-                      className="py-2 px-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-medium text-slate-200 flex items-center justify-center gap-1.5 transition-colors"
+                      className="py-2 px-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-[11px] font-medium text-slate-200 flex flex-col items-center justify-center gap-1 transition-colors"
                     >
                       <User className="h-3.5 w-3.5 text-teal-400" />
-                      <span>Cliente Demo</span>
+                      <span>Cliente</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => switchDemoRole('admin')}
+                      className="py-2 px-1.5 bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/30 rounded-xl text-[11px] font-medium text-purple-300 flex flex-col items-center justify-center gap-1 transition-colors"
+                    >
+                      <Shield className="h-3.5 w-3.5 text-purple-400" />
+                      <span>Admin</span>
                     </button>
                   </div>
                 </div>

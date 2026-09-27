@@ -6,17 +6,21 @@
 -- Habilitar extensión UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Tabla de Perfiles (Entrenadores y Clientes)
+-- 1. Tabla de Perfiles (Administradores, Entrenadores y Clientes)
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   full_name TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('trainer', 'client')),
+  role TEXT NOT NULL CHECK (role IN ('trainer', 'client', 'admin')),
   trainer_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   phone TEXT,
   medical_history TEXT,
   goals TEXT,
   avatar_url TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  deactivation_reason TEXT,
+  deactivated_at TIMESTAMPTZ,
+  last_login_at TIMESTAMPTZ DEFAULT now(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT unique_profile_email UNIQUE (email)
@@ -104,6 +108,15 @@ CREATE TABLE IF NOT EXISTS public.daily_nutrition_logs (
   UNIQUE(client_id, date)
 );
 
+-- 8. Historial de Inicios de Sesión (Analíticas Mensuales)
+CREATE TABLE IF NOT EXISTS public.login_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL,
+  logged_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ==========================================================
 -- ROW LEVEL SECURITY (RLS)
 -- ==========================================================
@@ -115,8 +128,15 @@ ALTER TABLE public.workout_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nutrition_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.progress_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_nutrition_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.login_history ENABLE ROW LEVEL SECURITY;
 
 -- Políticas de Perfiles
+CREATE POLICY "Admins pueden gestionar todos los perfiles"
+  ON public.profiles FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
+  );
+
 CREATE POLICY "Usuarios pueden ver su propio perfil" 
   ON public.profiles FOR SELECT 
   USING (auth.uid() = id);
@@ -132,6 +152,15 @@ CREATE POLICY "Usuarios pueden actualizar su propio perfil"
 CREATE POLICY "Inserción pública de perfiles al registrarse" 
   ON public.profiles FOR INSERT 
   WITH CHECK (auth.uid() = id);
+
+-- Políticas de Login History
+CREATE POLICY "Admins pueden ver todo el historial de login"
+  ON public.login_history FOR SELECT
+  USING (true);
+
+CREATE POLICY "Insercion publica de logs de inicio de sesion"
+  ON public.login_history FOR INSERT
+  WITH CHECK (true);
 
 -- Políticas de Workouts
 CREATE POLICY "Entrenadores gestionan sus propias rutinas" 

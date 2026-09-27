@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { TrainerDashboard } from './components/trainer/TrainerDashboard';
 import { ClientPortal } from './components/client/ClientPortal';
+import { AdminDashboard } from './components/admin/AdminDashboard';
 import { LandingPage } from './components/landing/LandingPage';
 import { AuthModal } from './components/AuthModal';
 import { Dumbbell } from 'lucide-react';
@@ -27,7 +28,7 @@ const MainContent: React.FC = () => {
     return <LandingPage />;
   }
 
-  // Vista autenticada (Entrenador o Cliente)
+  // Vista autenticada (Admin, Entrenador o Cliente)
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
       <Navbar
@@ -35,7 +36,9 @@ const MainContent: React.FC = () => {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {profile.role === 'client' ? (
+        {profile.role === 'admin' ? (
+          <AdminDashboard />
+        ) : profile.role === 'client' ? (
           <ClientPortal />
         ) : (
           <TrainerDashboard />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, Mail, User, ShieldCheck, Dumbbell, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Lock, Mail, User, ShieldCheck, Shield, Dumbbell, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/database';
 
@@ -91,22 +91,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-2 text-center">
             Prueba rápida sin registro
           </span>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             <button
               type="button"
               onClick={() => handleDemoLogin('trainer')}
-              className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded-lg font-medium flex items-center justify-center gap-1.5 transition-colors border border-slate-700"
+              className="py-2 px-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded-lg font-medium flex flex-col items-center justify-center gap-1 transition-colors border border-slate-700"
             >
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Coach Demo</span>
+              <span>Coach</span>
             </button>
             <button
               type="button"
               onClick={() => handleDemoLogin('client')}
-              className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded-lg font-medium flex items-center justify-center gap-1.5 transition-colors border border-slate-700"
+              className="py-2 px-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded-lg font-medium flex flex-col items-center justify-center gap-1 transition-colors border border-slate-700"
             >
               <User className="h-3.5 w-3.5 text-teal-400" />
-              <span>Cliente Demo</span>
+              <span>Cliente</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoLogin('admin')}
+              className="py-2 px-1.5 bg-purple-950/40 hover:bg-purple-900/50 text-xs text-purple-300 rounded-lg font-medium flex flex-col items-center justify-center gap-1 transition-colors border border-purple-500/30"
+            >
+              <Shield className="h-3.5 w-3.5 text-purple-400" />
+              <span>Admin</span>
             </button>
           </div>
         </div>

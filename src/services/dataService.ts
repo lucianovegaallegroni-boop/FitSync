@@ -7,10 +7,40 @@ import {
   NutritionGoal,
   ProgressLog,
   DailyNutritionLog,
+  MonthlyLoginStat,
 } from '../types/database';
 
 // Datos de demostración iniciales
-const INITIAL_DEMO_CLIENTS: Profile[] = [
+const INITIAL_DEMO_USERS: Profile[] = [
+  {
+    id: 'admin-1',
+    email: 'admin@fitsync.com',
+    full_name: 'Super Administrador FitSync',
+    role: 'admin',
+    is_active: true,
+    created_at: new Date(Date.now() - 150 * 86400000).toISOString(),
+    last_login_at: new Date().toISOString(),
+  },
+  {
+    id: 'trainer-1',
+    email: 'entrenador@fitsync.com',
+    full_name: 'Coach Rodrigo Paz',
+    role: 'trainer',
+    phone: '+34 600 111 222',
+    is_active: true,
+    created_at: new Date(Date.now() - 90 * 86400000).toISOString(),
+    last_login_at: new Date(Date.now() - 2 * 3600000).toISOString(),
+  },
+  {
+    id: 'trainer-2',
+    email: 'laura.coach@fitsync.com',
+    full_name: 'Coach Laura Giménez',
+    role: 'trainer',
+    phone: '+34 622 333 444',
+    is_active: true,
+    created_at: new Date(Date.now() - 60 * 86400000).toISOString(),
+    last_login_at: new Date(Date.now() - 18 * 3600000).toISOString(),
+  },
   {
     id: 'client-1',
     email: 'carlos.m@example.com',
@@ -20,7 +50,9 @@ const INITIAL_DEMO_CLIENTS: Profile[] = [
     phone: '+34 612 345 678',
     goals: 'Pérdida de grasa corporal (-5kg) y aumento de masa muscular',
     medical_history: 'Molestia leve en rodilla izquierda (evitar sentadillas muy profundas)',
+    is_active: true,
     created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+    last_login_at: new Date(Date.now() - 4 * 3600000).toISOString(),
   },
   {
     id: 'client-2',
@@ -31,7 +63,9 @@ const INITIAL_DEMO_CLIENTS: Profile[] = [
     phone: '+34 699 876 543',
     goals: 'Tonificación general y mejora de resistencia cardiovascular',
     medical_history: 'Ninguna lesión reportada',
+    is_active: true,
     created_at: new Date(Date.now() - 15 * 86400000).toISOString(),
+    last_login_at: new Date(Date.now() - 8 * 3600000).toISOString(),
   },
   {
     id: 'client-3',
@@ -42,8 +76,50 @@ const INITIAL_DEMO_CLIENTS: Profile[] = [
     phone: '+34 633 112 233',
     goals: 'Hipertrofia torso y hombros',
     medical_history: 'Asma inducida por ejercicio de alta intensidad',
+    is_active: false,
+    deactivation_reason: 'Falta de pago de suscripción mensual',
+    deactivated_at: new Date(Date.now() - 7 * 86400000).toISOString(),
     created_at: new Date(Date.now() - 40 * 86400000).toISOString(),
+    last_login_at: new Date(Date.now() - 7 * 86400000).toISOString(),
   },
+  {
+    id: 'client-4',
+    email: 'marta.s@example.com',
+    full_name: 'Marta Sánchez',
+    role: 'client',
+    trainer_id: 'trainer-2',
+    phone: '+34 655 444 333',
+    goals: 'Preparación carrera 10k y fuerza funcional',
+    medical_history: 'Tendinitis rotuliana recuperada',
+    is_active: true,
+    created_at: new Date(Date.now() - 25 * 86400000).toISOString(),
+    last_login_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+  {
+    id: 'client-5',
+    email: 'diego.m@example.com',
+    full_name: 'Diego Morales',
+    role: 'client',
+    trainer_id: 'trainer-2',
+    phone: '+34 677 888 999',
+    goals: 'Rehabilitación postural y fortalecimiento lumbar',
+    medical_history: 'Protrusión L4-L5',
+    is_active: false,
+    deactivation_reason: 'Incumplimiento de términos y condiciones de la comunidad',
+    deactivated_at: new Date(Date.now() - 12 * 86400000).toISOString(),
+    created_at: new Date(Date.now() - 50 * 86400000).toISOString(),
+    last_login_at: new Date(Date.now() - 12 * 86400000).toISOString(),
+  },
+];
+
+const INITIAL_DEMO_LOGIN_STATS: MonthlyLoginStat[] = [
+  { month: 'Mar', year: 2026, logins: 180, unique_users: 18, trainers: 4, clients: 14 },
+  { month: 'Abr', year: 2026, logins: 265, unique_users: 26, trainers: 6, clients: 20 },
+  { month: 'May', year: 2026, logins: 380, unique_users: 35, trainers: 8, clients: 27 },
+  { month: 'Jun', year: 2026, logins: 495, unique_users: 48, trainers: 11, clients: 37 },
+  { month: 'Jul', year: 2026, logins: 620, unique_users: 59, trainers: 14, clients: 45 },
+  { month: 'Ago', year: 2026, logins: 790, unique_users: 73, trainers: 17, clients: 56 },
+  { month: 'Sep', year: 2026, logins: 960, unique_users: 88, trainers: 21, clients: 67 },
 ];
 
 const INITIAL_DEMO_WORKOUTS: Workout[] = [
@@ -253,7 +329,18 @@ const INITIAL_DEMO_ASSIGNMENTS: WorkoutAssignment[] = [
 
 // Helper para persistencia local en demo
 class LocalDataStore {
-  clients = [...INITIAL_DEMO_CLIENTS];
+  users = [...INITIAL_DEMO_USERS];
+
+  get clients(): Profile[] {
+    return this.users.filter(u => u.role === 'client');
+  }
+
+  set clients(newClients: Profile[]) {
+    const nonClients = this.users.filter(u => u.role !== 'client');
+    this.users = [...nonClients, ...newClients];
+  }
+
+  loginStats = [...INITIAL_DEMO_LOGIN_STATS];
   workouts = [...INITIAL_DEMO_WORKOUTS];
   nutrition = { ...INITIAL_DEMO_NUTRITION };
   progress = [...INITIAL_DEMO_PROGRESS];
@@ -661,5 +748,181 @@ export const dataService = {
       console.warn('Storage upload error (usando blob preview):', e);
       return URL.createObjectURL(file);
     }
+  },
+
+  // --- MÉTODOS DE ADMINISTRADOR Y CONTROL DE USUARIOS ---
+
+  // Obtener todos los usuarios del sistema (entrenadores, clientes, administradores)
+  async getAllUsers(): Promise<Profile[]> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        const map = new Map<string, Profile>();
+        localStore.users.forEach(u => map.set(u.id, u));
+        data.forEach(u => map.set(u.id, u));
+        return Array.from(map.values());
+      }
+    } catch {
+      // noop
+    }
+    return [...localStore.users];
+  },
+
+  // Modificar perfil de usuario por el Admin
+  async updateUserProfile(userId: string, updates: Partial<Profile>): Promise<Profile> {
+    const idx = localStore.users.findIndex(u => u.id === userId);
+    let updatedUser: Profile;
+    if (idx >= 0) {
+      localStore.users[idx] = { ...localStore.users[idx], ...updates };
+      updatedUser = localStore.users[idx];
+    } else {
+      updatedUser = { id: userId, ...updates } as Profile;
+      localStore.users.push(updatedUser);
+    }
+
+    try {
+      await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId);
+    } catch (e) {
+      console.warn('Error actualizando usuario en Supabase:', e);
+    }
+
+    return updatedUser;
+  },
+
+  // Activar o desactivar cuenta de usuario con motivo
+  async setUserActiveStatus(userId: string, isActive: boolean, reason?: string): Promise<Profile> {
+    const updates: Partial<Profile> = {
+      is_active: isActive,
+      deactivation_reason: isActive ? null : (reason || 'Desactivado por el administrador'),
+      deactivated_at: isActive ? null : new Date().toISOString(),
+    };
+
+    return this.updateUserProfile(userId, updates);
+  },
+
+  // Obtener estadísticas de logins mes a mes
+  async getMonthlyLoginStats(): Promise<MonthlyLoginStat[]> {
+    try {
+      const { data, error } = await supabase
+        .from('login_history')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const groupMap: Record<string, { month: string; year: number; logins: number; userIds: Set<string>; trainers: Set<string>; clients: Set<string> }> = {};
+
+        data.forEach(item => {
+          const d = new Date(item.created_at);
+          const monthStr = months[d.getMonth()];
+          const year = d.getFullYear();
+          const key = `${year}-${d.getMonth()}`;
+
+          if (!groupMap[key]) {
+            groupMap[key] = {
+              month: monthStr,
+              year,
+              logins: 0,
+              userIds: new Set(),
+              trainers: new Set(),
+              clients: new Set(),
+            };
+          }
+          groupMap[key].logins += 1;
+          groupMap[key].userIds.add(item.user_id);
+          if (item.role === 'trainer') groupMap[key].trainers.add(item.user_id);
+          if (item.role === 'client') groupMap[key].clients.add(item.user_id);
+        });
+
+        const aggregated = Object.values(groupMap).map(g => ({
+          month: g.month,
+          year: g.year,
+          logins: g.logins,
+          unique_users: g.userIds.size,
+          trainers: g.trainers.size,
+          clients: g.clients.size,
+        }));
+
+        if (aggregated.length > 0) return aggregated;
+      }
+    } catch {
+      // noop
+    }
+
+    return [...localStore.loginStats];
+  },
+
+  // Registrar login de usuario
+  async recordLogin(userId: string, email: string, role: string): Promise<void> {
+    const now = new Date().toISOString();
+
+    const u = localStore.users.find(x => x.id === userId || x.email.toLowerCase() === email.toLowerCase());
+    if (u) {
+      u.last_login_at = now;
+    }
+
+    try {
+      await supabase.from('profiles').update({ last_login_at: now }).eq('id', userId);
+    } catch {
+      // noop
+    }
+
+    try {
+      await supabase.from('login_history').insert([{
+        user_id: userId,
+        email,
+        role,
+        created_at: now,
+      }]);
+    } catch {
+      // noop
+    }
+  },
+
+  // Verificar si un usuario está activo antes de permitir login
+  async checkUserStatus(email: string): Promise<{ allowed: boolean; reason?: string; profile?: Profile }> {
+    const norm = email.trim().toLowerCase();
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', norm)
+        .maybeSingle();
+
+      if (!error && data) {
+        if (data.is_active === false) {
+          return {
+            allowed: false,
+            reason: data.deactivation_reason || 'Esta cuenta ha sido desactivada por un administrador.',
+            profile: data,
+          };
+        }
+        return { allowed: true, profile: data };
+      }
+    } catch {
+      // noop
+    }
+
+    const localUser = localStore.users.find(u => u.email.trim().toLowerCase() === norm);
+    if (localUser) {
+      if (localUser.is_active === false) {
+        return {
+          allowed: false,
+          reason: localUser.deactivation_reason || 'Esta cuenta ha sido desactivada por un administrador.',
+          profile: localUser,
+        };
+      }
+      return { allowed: true, profile: localUser };
+    }
+
+    return { allowed: true };
   },
 };
