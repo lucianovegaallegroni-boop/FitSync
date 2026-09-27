@@ -193,6 +193,12 @@ const localStore = new LocalDataStore();
 export const dataService = {
   // Obtener clientes del entrenador
   async getClients(trainerId: string): Promise<Profile[]> {
+    // Limpiar duplicados previos en memoria si existiesen
+    const uniqueLocal = localStore.clients.filter((c, idx, arr) =>
+      arr.findIndex(item => item.email.trim().toLowerCase() === c.email.trim().toLowerCase()) === idx
+    );
+    localStore.clients = uniqueLocal;
+
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -200,11 +206,14 @@ export const dataService = {
         .eq('trainer_id', trainerId);
 
       if (error || !data || data.length === 0) {
-        return localStore.clients;
+        return uniqueLocal;
       }
-      return data;
+      // Deduplicar datos remotos por email
+      return data.filter((c, idx, arr) =>
+        arr.findIndex(item => item.email.trim().toLowerCase() === c.email.trim().toLowerCase()) === idx
+      );
     } catch {
-      return localStore.clients;
+      return uniqueLocal;
     }
   },
 

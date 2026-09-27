@@ -15,7 +15,8 @@ import {
   Sparkles,
   Phone,
   FileText,
-  Weight
+  Weight,
+  Loader2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { dataService } from '../../services/dataService';
@@ -39,12 +40,14 @@ export const TrainerDashboard: React.FC = () => {
   const [newClientGoals, setNewClientGoals] = useState('');
   const [newClientMedical, setNewClientMedical] = useState('');
   const [clientError, setClientError] = useState('');
+  const [isCreatingClient, setIsCreatingClient] = useState(false);
 
   // Estados para constructor de rutinas
   const [showWorkoutModal, setShowWorkoutModal] = useState(false);
   const [workoutTitle, setWorkoutTitle] = useState('');
   const [workoutDesc, setWorkoutDesc] = useState('');
   const [workoutError, setWorkoutError] = useState('');
+  const [isCreatingWorkout, setIsCreatingWorkout] = useState(false);
   const [exercisesList, setExercisesList] = useState<Array<{ day_name: string; exercise_name: string; sets: number; reps: string; rest_seconds: number }>>([
     { day_name: 'Día 1: Pecho y Tríceps', exercise_name: 'Press de Banca Plano', sets: 4, reps: '8-10', rest_seconds: 90 },
     { day_name: 'Día 1: Pecho y Tríceps', exercise_name: 'Aperturas con Mancuernas', sets: 3, reps: '12', rest_seconds: 60 },
@@ -71,11 +74,20 @@ export const TrainerDashboard: React.FC = () => {
     if (!profile) return;
     const cList = await dataService.getClients(profile.id);
     const wList = await dataService.getWorkouts(profile.id);
-    setClients(cList);
-    setWorkouts(wList);
 
-    if (cList.length > 0 && !selectedClient) {
-      handleSelectClient(cList[0]);
+    // Deduplicación preventiva en memoria
+    const uniqueClients = cList.filter((c, idx, arr) =>
+      arr.findIndex(item => item.email.trim().toLowerCase() === c.email.trim().toLowerCase()) === idx
+    );
+    const uniqueWorkouts = wList.filter((w, idx, arr) =>
+      arr.findIndex(item => item.title.trim().toLowerCase() === w.title.trim().toLowerCase()) === idx
+    );
+
+    setClients(uniqueClients);
+    setWorkouts(uniqueWorkouts);
+
+    if (uniqueClients.length > 0 && !selectedClient) {
+      handleSelectClient(uniqueClients[0]);
     }
   };
 
@@ -96,7 +108,7 @@ export const TrainerDashboard: React.FC = () => {
 
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile) return;
+    if (!profile || isCreatingClient) return;
     setClientError('');
 
     const trimmedEmail = newClientEmail.trim().toLowerCase();
@@ -106,6 +118,7 @@ export const TrainerDashboard: React.FC = () => {
       return;
     }
 
+    setIsCreatingClient(true);
     try {
       const created = await dataService.addClient({
         email: newClientEmail.trim(),
@@ -115,7 +128,12 @@ export const TrainerDashboard: React.FC = () => {
         medical_history: newClientMedical.trim(),
         trainer_id: profile.id,
       });
-      setClients([...clients, created]);
+
+      setClients(prev => {
+        const withoutDup = prev.filter(c => c.email.trim().toLowerCase() !== created.email.trim().toLowerCase());
+        return [...withoutDup, created];
+      });
+
       setShowAddClientModal(false);
       setNewClientName('');
       setNewClientEmail('');
@@ -126,6 +144,8 @@ export const TrainerDashboard: React.FC = () => {
       handleSelectClient(created);
     } catch (err: any) {
       setClientError(err.message || 'Error al registrar el cliente.');
+    } finally {
+      setIsCreatingClient(false);
     }
   };
 
@@ -138,7 +158,7 @@ export const TrainerDashboard: React.FC = () => {
 
   const handleCreateWorkout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile) return;
+    if (!profile || isCreatingWorkout) return;
     setWorkoutError('');
 
     const trimmedTitle = workoutTitle.trim().toLowerCase();
@@ -154,12 +174,18 @@ export const TrainerDashboard: React.FC = () => {
       return;
     }
 
+    setIsCreatingWorkout(true);
     try {
       const created = await dataService.createWorkout(
         { trainer_id: profile.id, title: workoutTitle.trim(), description: workoutDesc.trim() },
         validExercises.map((ex, i) => ({ ...ex, order_index: i }))
       );
-      setWorkouts([created, ...workouts]);
+
+      setWorkouts(prev => {
+        const withoutDup = prev.filter(w => w.title.trim().toLowerCase() !== created.title.trim().toLowerCase());
+        return [created, ...withoutDup];
+      });
+
       setShowWorkoutModal(false);
       setWorkoutTitle('');
       setWorkoutDesc('');
@@ -169,6 +195,8 @@ export const TrainerDashboard: React.FC = () => {
       ]);
     } catch (err: any) {
       setWorkoutError(err.message || 'Error al guardar la rutina.');
+    } finally {
+      setIsCreatingWorkout(false);
     }
   };
 
@@ -916,16 +944,25 @@ export const TrainerDashboard: React.FC = () => {
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
+                  disabled={isCreatingClient}
                   onClick={() => setShowAddClientModal(false)}
-                  className="px-4 py-2 text-xs text-slate-400 hover:text-white"
+                  className="px-4 py-2 text-xs text-slate-400 hover:text-white disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold px-4 py-2 rounded-xl text-xs transition-colors"
+                  disabled={isCreatingClient}
+                  className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-semibold px-4 py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-2 min-w-[130px]"
                 >
-                  Guardar Cliente
+                  {isCreatingClient ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>Guardar Cliente</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -1051,16 +1088,25 @@ export const TrainerDashboard: React.FC = () => {
               <div className="flex justify-end gap-2 pt-4">
                 <button
                   type="button"
+                  disabled={isCreatingWorkout}
                   onClick={() => setShowWorkoutModal(false)}
-                  className="px-4 py-2 text-xs text-slate-400 hover:text-white"
+                  className="px-4 py-2 text-xs text-slate-400 hover:text-white disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold px-4 py-2 rounded-xl text-xs transition-colors"
+                  disabled={isCreatingWorkout}
+                  className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-semibold px-4 py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-2 min-w-[130px]"
                 >
-                  Guardar Rutina
+                  {isCreatingWorkout ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>Guardar Rutina</span>
+                  )}
                 </button>
               </div>
             </form>
