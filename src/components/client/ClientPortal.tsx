@@ -15,7 +15,8 @@ import {
   Award,
   Clock,
   Utensils,
-  Download
+  Download,
+  Loader2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { dataService } from '../../services/dataService';
@@ -29,6 +30,7 @@ export const ClientPortal: React.FC = () => {
   const [assignment, setAssignment] = useState<WorkoutAssignment | null>(null);
   const [nutrition, setNutrition] = useState<NutritionGoal | null>(null);
   const [activeClientDayIndex, setActiveClientDayIndex] = useState(0);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [progressLogs, setProgressLogs] = useState<ProgressLog[]>([]);
   const [dailyLog, setDailyLog] = useState<DailyNutritionLog>({
     id: 'temp',
@@ -115,22 +117,27 @@ export const ClientPortal: React.FC = () => {
     await dataService.updateDailyLog(updated);
   };
 
-  const handleExportPDF = () => {
-    if (!nutrition) return;
-    exportNutritionPlanToPDF({
-      clientName: profile?.full_name || 'Atleta FitSync',
-      clientEmail: profile?.email,
-      coachName: 'Entrenador FitSync',
-      nutrition: {
-        calories: nutrition.calories,
-        protein_g: nutrition.protein_g,
-        carbs_g: nutrition.carbs_g,
-        fat_g: nutrition.fat_g,
-        meals_per_day: nutrition.meals_per_day,
-        notes: nutrition.notes,
-        diet_days: nutrition.diet_days,
-      },
-    });
+  const handleExportPDF = async () => {
+    if (!nutrition || isExportingPDF) return;
+    setIsExportingPDF(true);
+    try {
+      await exportNutritionPlanToPDF({
+        clientName: profile?.full_name || 'Atleta FitSync',
+        clientEmail: profile?.email,
+        coachName: 'Entrenador FitSync',
+        nutrition: {
+          calories: nutrition.calories,
+          protein_g: nutrition.protein_g,
+          carbs_g: nutrition.carbs_g,
+          fat_g: nutrition.fat_g,
+          meals_per_day: nutrition.meals_per_day,
+          notes: nutrition.notes,
+          diet_days: nutrition.diet_days,
+        },
+      });
+    } finally {
+      setIsExportingPDF(false);
+    }
   };
 
   const handleAdjustWater = async (delta: number) => {
@@ -348,12 +355,22 @@ export const ClientPortal: React.FC = () => {
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <button
                 type="button"
+                disabled={isExportingPDF}
                 onClick={handleExportPDF}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-colors"
-                title="Descargar o imprimir la dieta y metas en PDF"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Descargar directamente la dieta y metas en PDF"
               >
-                <Download className="h-3.5 w-3.5" />
-                <span>Exportar PDF</span>
+                {isExportingPDF ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
+                    <span>Descargando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-3.5 w-3.5" />
+                    <span>Descargar PDF</span>
+                  </>
+                )}
               </button>
 
               <div className="flex gap-1.5 font-mono text-[11px]">

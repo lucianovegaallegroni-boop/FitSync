@@ -115,6 +115,7 @@ export const TrainerDashboard: React.FC = () => {
   const [activeDayIndex, setActiveDayIndex] = useState(0);
   const [showAddDayModal, setShowAddDayModal] = useState(false);
   const [newDayName, setNewDayName] = useState('Lunes');
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -451,22 +452,27 @@ export const TrainerDashboard: React.FC = () => {
     setTimeout(() => setNutritionSuccess(false), 3000);
   };
 
-  const handleExportPDF = () => {
-    if (!selectedClient) return;
-    exportNutritionPlanToPDF({
-      clientName: selectedClient.full_name,
-      clientEmail: selectedClient.email,
-      coachName: profile?.full_name || 'Coach FitSync',
-      nutrition: {
-        calories: Number(macroCalories),
-        protein_g: Number(macroProtein),
-        carbs_g: Number(macroCarbs),
-        fat_g: Number(macroFat),
-        meals_per_day: Number(mealsPerDay),
-        notes: macroNotes,
-        diet_days: dietDays,
-      },
-    });
+  const handleExportPDF = async () => {
+    if (!selectedClient || isExportingPDF) return;
+    setIsExportingPDF(true);
+    try {
+      await exportNutritionPlanToPDF({
+        clientName: selectedClient.full_name,
+        clientEmail: selectedClient.email,
+        coachName: profile?.full_name || 'Coach FitSync',
+        nutrition: {
+          calories: Number(macroCalories),
+          protein_g: Number(macroProtein),
+          carbs_g: Number(macroCarbs),
+          fat_g: Number(macroFat),
+          meals_per_day: Number(mealsPerDay),
+          notes: macroNotes,
+          diet_days: dietDays,
+        },
+      });
+    } finally {
+      setIsExportingPDF(false);
+    }
   };
 
   // Clientes sin registro en > 3 días (conforme a sección 3.1 del documento de proyecto)
@@ -1260,12 +1266,22 @@ export const TrainerDashboard: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2.5 shrink-0">
                 <button
                   type="button"
+                  disabled={isExportingPDF}
                   onClick={handleExportPDF}
-                  className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold px-3.5 py-2 rounded-xl text-xs transition-colors shadow-sm"
-                  title="Descargar o imprimir el plan nutricional en formato PDF"
+                  className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold px-3.5 py-2 rounded-xl text-xs transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Descargar directamente el plan nutricional en formato PDF"
                 >
-                  <Download className="h-4 w-4" />
-                  <span>Exportar como PDF</span>
+                  {isExportingPDF ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                      <span>Descargando PDF...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      <span>Descargar PDF</span>
+                    </>
+                  )}
                 </button>
 
                 <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
