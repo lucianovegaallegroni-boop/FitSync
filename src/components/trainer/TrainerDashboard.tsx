@@ -38,11 +38,13 @@ export const TrainerDashboard: React.FC = () => {
   const [newClientPhone, setNewClientPhone] = useState('');
   const [newClientGoals, setNewClientGoals] = useState('');
   const [newClientMedical, setNewClientMedical] = useState('');
+  const [clientError, setClientError] = useState('');
 
   // Estados para constructor de rutinas
   const [showWorkoutModal, setShowWorkoutModal] = useState(false);
   const [workoutTitle, setWorkoutTitle] = useState('');
   const [workoutDesc, setWorkoutDesc] = useState('');
+  const [workoutError, setWorkoutError] = useState('');
   const [exercisesList, setExercisesList] = useState<Array<{ day_name: string; exercise_name: string; sets: number; reps: string; rest_seconds: number }>>([
     { day_name: 'Día 1: Pecho y Tríceps', exercise_name: 'Press de Banca Plano', sets: 4, reps: '8-10', rest_seconds: 90 },
     { day_name: 'Día 1: Pecho y Tríceps', exercise_name: 'Aperturas con Mancuernas', sets: 3, reps: '12', rest_seconds: 60 },
@@ -95,22 +97,36 @@ export const TrainerDashboard: React.FC = () => {
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
-    const created = await dataService.addClient({
-      email: newClientEmail,
-      full_name: newClientName,
-      phone: newClientPhone,
-      goals: newClientGoals,
-      medical_history: newClientMedical,
-      trainer_id: profile.id,
-    });
-    setClients([...clients, created]);
-    setShowAddClientModal(false);
-    setNewClientName('');
-    setNewClientEmail('');
-    setNewClientPhone('');
-    setNewClientGoals('');
-    setNewClientMedical('');
-    handleSelectClient(created);
+    setClientError('');
+
+    const trimmedEmail = newClientEmail.trim().toLowerCase();
+    const duplicate = clients.some(c => c.email.trim().toLowerCase() === trimmedEmail);
+    if (duplicate) {
+      setClientError(`Ya existe un cliente registrado con el correo "${newClientEmail}".`);
+      return;
+    }
+
+    try {
+      const created = await dataService.addClient({
+        email: newClientEmail.trim(),
+        full_name: newClientName.trim(),
+        phone: newClientPhone.trim(),
+        goals: newClientGoals.trim(),
+        medical_history: newClientMedical.trim(),
+        trainer_id: profile.id,
+      });
+      setClients([...clients, created]);
+      setShowAddClientModal(false);
+      setNewClientName('');
+      setNewClientEmail('');
+      setNewClientPhone('');
+      setNewClientGoals('');
+      setNewClientMedical('');
+      setClientError('');
+      handleSelectClient(created);
+    } catch (err: any) {
+      setClientError(err.message || 'Error al registrar el cliente.');
+    }
   };
 
   const handleAddExerciseRow = () => {
@@ -123,15 +139,37 @@ export const TrainerDashboard: React.FC = () => {
   const handleCreateWorkout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
+    setWorkoutError('');
+
+    const trimmedTitle = workoutTitle.trim().toLowerCase();
+    const duplicate = workouts.some(w => w.title.trim().toLowerCase() === trimmedTitle);
+    if (duplicate) {
+      setWorkoutError(`Ya tienes una rutina registrada con el nombre "${workoutTitle}".`);
+      return;
+    }
+
     const validExercises = exercisesList.filter(ex => ex.exercise_name.trim().length > 0);
-    const created = await dataService.createWorkout(
-      { trainer_id: profile.id, title: workoutTitle, description: workoutDesc },
-      validExercises.map((ex, i) => ({ ...ex, order_index: i }))
-    );
-    setWorkouts([created, ...workouts]);
-    setShowWorkoutModal(false);
-    setWorkoutTitle('');
-    setWorkoutDesc('');
+    if (validExercises.length === 0) {
+      setWorkoutError('Debes agregar al menos un ejercicio a la plantilla de rutina.');
+      return;
+    }
+
+    try {
+      const created = await dataService.createWorkout(
+        { trainer_id: profile.id, title: workoutTitle.trim(), description: workoutDesc.trim() },
+        validExercises.map((ex, i) => ({ ...ex, order_index: i }))
+      );
+      setWorkouts([created, ...workouts]);
+      setShowWorkoutModal(false);
+      setWorkoutTitle('');
+      setWorkoutDesc('');
+      setWorkoutError('');
+      setExercisesList([
+        { day_name: 'Día 1: Pecho y Tríceps', exercise_name: 'Press de Banca Plano', sets: 4, reps: '8-10', rest_seconds: 90 },
+      ]);
+    } catch (err: any) {
+      setWorkoutError(err.message || 'Error al guardar la rutina.');
+    }
   };
 
   const handleAssignWorkout = async (e: React.FormEvent) => {
@@ -811,6 +849,14 @@ export const TrainerDashboard: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-left">
             <h3 className="text-lg font-bold text-white mb-4">Registrar Nuevo Cliente</h3>
+            
+            {clientError && (
+              <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-xl text-xs flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
+                <span>{clientError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleCreateClient} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">Nombre Completo</label>
@@ -893,6 +939,13 @@ export const TrainerDashboard: React.FC = () => {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative text-left max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white mb-1">Constructor de Rutina</h3>
             <p className="text-xs text-slate-400 mb-4">Crea una plantilla con sus ejercicios, series y repeticiones.</p>
+
+            {workoutError && (
+              <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-xl text-xs flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
+                <span>{workoutError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleCreateWorkout} className="space-y-4">
               <div>

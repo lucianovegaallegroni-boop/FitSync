@@ -210,6 +210,16 @@ export const dataService = {
 
   // Crear o invitar cliente
   async addClient(clientData: Partial<Profile>): Promise<Profile> {
+    const emailNorm = (clientData.email || '').trim().toLowerCase();
+    
+    // Validar duplicado en store local
+    if (emailNorm) {
+      const exists = localStore.clients.some(c => c.email.trim().toLowerCase() === emailNorm);
+      if (exists) {
+        throw new Error(`Ya existe un cliente registrado con el correo: ${clientData.email}`);
+      }
+    }
+
     const newClient: Profile = {
       id: `client-${Date.now()}`,
       email: clientData.email || '',
@@ -223,6 +233,19 @@ export const dataService = {
     };
 
     try {
+      // Validar si existe en Supabase
+      if (emailNorm) {
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', emailNorm)
+          .maybeSingle();
+
+        if (existingUser) {
+          throw new Error(`Ya existe un usuario en el sistema con el correo: ${clientData.email}`);
+        }
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .insert([newClient])
@@ -232,7 +255,10 @@ export const dataService = {
       if (!error && data) {
         return data;
       }
-    } catch (e) {
+    } catch (e: any) {
+      if (e.message && e.message.includes('Ya existe')) {
+        throw e;
+      }
       console.warn('Fallback a store local para agregar cliente:', e);
     }
 
@@ -260,6 +286,16 @@ export const dataService = {
 
   // Crear rutina con ejercicios
   async createWorkout(workout: Omit<Workout, 'id' | 'created_at'>, exercises: Omit<WorkoutExercise, 'id' | 'workout_id'>[]): Promise<Workout> {
+    const titleNorm = workout.title.trim().toLowerCase();
+
+    // Validar duplicado en store local
+    const exists = localStore.workouts.some(
+      w => w.trainer_id === workout.trainer_id && w.title.trim().toLowerCase() === titleNorm
+    );
+    if (exists) {
+      throw new Error(`Ya existe una rutina con el nombre "${workout.title}". Elige un nombre diferente.`);
+    }
+
     const workoutId = `workout-${Date.now()}`;
     const newWorkout: Workout = {
       id: workoutId,
@@ -275,6 +311,18 @@ export const dataService = {
     };
 
     try {
+      // Validar si existe en Supabase
+      const { data: existingWk } = await supabase
+        .from('workouts')
+        .select('id')
+        .eq('trainer_id', workout.trainer_id)
+        .ilike('title', workout.title.trim())
+        .maybeSingle();
+
+      if (existingWk) {
+        throw new Error(`Ya existe una rutina con el nombre "${workout.title}". Elige un nombre diferente.`);
+      }
+
       const { data, error } = await supabase
         .from('workouts')
         .insert([{

@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   goals TEXT,
   avatar_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT unique_profile_email UNIQUE (email)
 );
 
 -- 2. Tabla de Plantillas de Rutinas (Workouts)
@@ -28,7 +29,8 @@ CREATE TABLE IF NOT EXISTS public.workouts (
   title TEXT NOT NULL,
   description TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT unique_trainer_workout_title UNIQUE (trainer_id, title)
 );
 
 -- 3. Tabla de Ejercicios por Rutina
