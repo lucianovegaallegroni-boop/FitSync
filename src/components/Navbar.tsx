@@ -1,13 +1,12 @@
 import React from 'react';
-import { Dumbbell, User, LogOut, Database, ArrowLeftRight } from 'lucide-react';
+import { Dumbbell, User, LogOut, ArrowLeftRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
-  onOpenDbModal: () => void;
   onOpenAuthModal: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenDbModal, onOpenAuthModal }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenAuthModal }) => {
   const { profile, logout, switchDemoRole, isDemoMode } = useAuth();
 
   return (
@@ -33,7 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDbModal, onOpenAuthModal }
 
         {/* Right Actions & Account Status */}
         <div className="flex items-center gap-1.5 sm:gap-3">
-          {/* Demo account switcher (Sin botón de vista móvil, switcher de rol limpio) */}
+          {/* Demo account switcher */}
           {isDemoMode && profile && (
             <button
               onClick={() => switchDemoRole(profile.role === 'trainer' ? 'client' : 'trainer')}
@@ -47,16 +46,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDbModal, onOpenAuthModal }
               </span>
             </button>
           )}
-
-          {/* Supabase status button */}
-          <button
-            onClick={onOpenDbModal}
-            className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-2.5 sm:px-3 py-1.5 rounded-xl transition-colors shrink-0"
-            title="Conexión Supabase y SQL Schema"
-          >
-            <Database className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden sm:inline font-mono">Supabase</span>
-          </button>
 
           {profile ? (
             <div className="flex items-center gap-2 pl-1 sm:pl-2 border-l border-slate-800">
