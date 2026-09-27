@@ -218,8 +218,8 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // Valor máximo para la escala del gráfico
-  const peakLogins = Math.max(...loginStats.map((s) => s.logins), 100);
-  const maxLogins = Math.ceil(peakLogins / 100) * 100;
+  const rawPeak = loginStats.length > 0 ? Math.max(...loginStats.map((s) => s.logins), 1) : 10;
+  const maxLogins = rawPeak > 50 ? Math.ceil(rawPeak / 50) * 50 : Math.max(Math.ceil(rawPeak / 5) * 5, 5);
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -419,56 +419,64 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Columns & Proportional Bars */}
-              <div className="absolute inset-0 flex items-end justify-around px-2 sm:px-4">
-                {loginStats.map((stat) => {
-                  const heightPercentage = Math.round((stat.logins / maxLogins) * 100);
-                  const isSelected = selectedMonth?.month === stat.month && selectedMonth?.year === stat.year;
+              {loginStats.length === 0 ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 text-sm px-4 text-center">
+                  <BarChart3 className="w-8 h-8 text-slate-600 mb-2 opacity-50" />
+                  <p className="font-semibold text-slate-400">Sin inicios de sesión registrados todavía</p>
+                  <p className="text-xs text-slate-500 max-w-sm mt-1">Los accesos reales de entrenadores y atletas en producción se contabilizarán automáticamente aquí.</p>
+                </div>
+              ) : (
+                <div className="absolute inset-0 flex items-end justify-around px-2 sm:px-4">
+                  {loginStats.map((stat) => {
+                    const heightPercentage = Math.round((stat.logins / maxLogins) * 100);
+                    const isSelected = selectedMonth?.month === stat.month && selectedMonth?.year === stat.year;
 
-                  return (
-                    <div
-                      key={`${stat.year}-${stat.month}`}
-                      onClick={() => setSelectedMonth(stat)}
-                      className="flex-1 h-full max-w-[56px] flex flex-col justify-end items-center group cursor-pointer relative z-10 px-1 sm:px-1.5"
-                    >
-                      {/* Floating Tooltip */}
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full mb-3 left-1/2 -translate-x-1/2 bg-slate-950/95 border border-purple-500/40 text-slate-200 text-[10px] rounded-xl px-3 py-2 shadow-2xl pointer-events-none whitespace-nowrap text-center z-30 backdrop-blur-md">
-                        <p className="font-bold text-white text-xs">{stat.month} {stat.year}</p>
-                        <p className="text-purple-400 font-black text-sm">{stat.logins} accesos</p>
-                        <p className="text-slate-400 text-[10px] mt-0.5">
-                          {stat.trainers} coaches • {stat.clients} atletas
-                        </p>
-                      </div>
-
-                      {/* Value label directly above bar */}
-                      <span
-                        className={`text-[10px] sm:text-xs font-bold mb-1.5 transition-all select-none ${
-                          isSelected
-                            ? 'text-purple-300 scale-110'
-                            : 'text-slate-400 group-hover:text-white'
-                        }`}
-                      >
-                        {stat.logins}
-                      </span>
-
-                      {/* Bar Track & Fill with Relative Height */}
+                    return (
                       <div
-                        style={{ height: `${Math.max(heightPercentage, 5)}%` }}
-                        className={`w-full rounded-t-xl transition-all duration-500 relative flex flex-col justify-between overflow-hidden shadow-lg ${
-                          isSelected
-                            ? 'bg-gradient-to-t from-purple-700 via-purple-500 to-emerald-400 shadow-purple-500/40 ring-2 ring-purple-400/60'
-                            : 'bg-gradient-to-t from-purple-900/80 via-purple-600/90 to-emerald-400/90 group-hover:from-purple-600 group-hover:via-purple-500 group-hover:to-teal-300 group-hover:shadow-purple-500/30'
-                        }`}
+                        key={`${stat.year}-${stat.month}`}
+                        onClick={() => setSelectedMonth(stat)}
+                        className="flex-1 h-full max-w-[56px] flex flex-col justify-end items-center group cursor-pointer relative z-10 px-1 sm:px-1.5"
                       >
-                        {/* Top highlight bar cap */}
-                        <div className="w-full h-1 bg-white/50" />
+                        {/* Floating Tooltip */}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full mb-3 left-1/2 -translate-x-1/2 bg-slate-950/95 border border-purple-500/40 text-slate-200 text-[10px] rounded-xl px-3 py-2 shadow-2xl pointer-events-none whitespace-nowrap text-center z-30 backdrop-blur-md">
+                          <p className="font-bold text-white text-xs">{stat.month} {stat.year}</p>
+                          <p className="text-purple-400 font-black text-sm">{stat.logins} accesos</p>
+                          <p className="text-slate-400 text-[10px] mt-0.5">
+                            {stat.trainers} coaches • {stat.clients} atletas
+                          </p>
+                        </div>
 
-                        {/* Shimmer overlay on hover */}
-                        <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors pointer-events-none" />
+                        {/* Value label directly above bar */}
+                        <span
+                          className={`text-[10px] sm:text-xs font-bold mb-1.5 transition-all select-none ${
+                            isSelected
+                              ? 'text-purple-300 scale-110'
+                              : 'text-slate-400 group-hover:text-white'
+                          }`}
+                        >
+                          {stat.logins}
+                        </span>
+
+                        {/* Bar Track & Fill with Relative Height */}
+                        <div
+                          style={{ height: `${Math.max(heightPercentage, 5)}%` }}
+                          className={`w-full rounded-t-xl transition-all duration-500 relative flex flex-col justify-between overflow-hidden shadow-lg ${
+                            isSelected
+                              ? 'bg-gradient-to-t from-purple-700 via-purple-500 to-emerald-400 shadow-purple-500/40 ring-2 ring-purple-400/60'
+                              : 'bg-gradient-to-t from-purple-900/80 via-purple-600/90 to-emerald-400/90 group-hover:from-purple-600 group-hover:via-purple-500 group-hover:to-teal-300 group-hover:shadow-purple-500/30'
+                          }`}
+                        >
+                          {/* Top highlight bar cap */}
+                          <div className="w-full h-1 bg-white/50" />
+
+                          {/* Shimmer overlay on hover */}
+                          <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors pointer-events-none" />
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 

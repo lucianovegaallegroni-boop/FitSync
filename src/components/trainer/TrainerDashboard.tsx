@@ -64,7 +64,7 @@ function createDefaultMeals(count: number): MealSlot[] {
 }
 
 export const TrainerDashboard: React.FC = () => {
-  const { profile } = useAuth();
+  const { profile, isDemoMode } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'workouts' | 'nutrition' | 'analytics'>('overview');
 
   const [clients, setClients] = useState<Profile[]>([]);
@@ -823,36 +823,44 @@ export const TrainerDashboard: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {INITIAL_DEMO_PROGRESS.slice(2, 4).map(p => (
-                    <div key={p.id} className="bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex gap-3 p-3">
-                      {p.url_foto_frente ? (
-                        <img
-                          src={p.url_foto_frente}
-                          alt="Progreso atleta"
-                          className="h-20 w-16 rounded-lg object-cover border border-slate-700 shrink-0"
-                        />
-                      ) : (
-                        <div className="h-20 w-16 rounded-lg bg-slate-900 flex items-center justify-center text-slate-500 shrink-0">
-                          <Weight className="h-5 w-5" />
-                        </div>
-                      )}
-                      <div className="flex-1 flex flex-col justify-between text-xs">
-                        <div>
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-white text-sm">{p.weight} kg</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{p.date}</span>
+                  {((isDemoMode ? INITIAL_DEMO_PROGRESS.slice(2, 4) : clientProgress.slice(0, 2)).length > 0) ? (
+                    (isDemoMode ? INITIAL_DEMO_PROGRESS.slice(2, 4) : clientProgress.slice(0, 2)).map(p => (
+                      <div key={p.id} className="bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex gap-3 p-3">
+                        {p.url_foto_frente ? (
+                          <img
+                            src={p.url_foto_frente}
+                            alt="Progreso atleta"
+                            className="h-20 w-16 rounded-lg object-cover border border-slate-750 shrink-0"
+                          />
+                        ) : (
+                          <div className="h-20 w-16 rounded-lg bg-slate-900 flex items-center justify-center text-slate-500 shrink-0">
+                            <Weight className="h-5 w-5" />
                           </div>
-                          {p.waist_cm && (
-                            <span className="text-[11px] text-slate-400">{p.waist_cm} cm cintura</span>
-                          )}
-                          <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 italic">
-                            "{p.notes_cliente || 'Check-in semanal enviado.'}"
-                          </p>
+                        )}
+                        <div className="flex-1 flex flex-col justify-between text-xs">
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-white text-sm">{p.weight} kg</span>
+                              <span className="text-[10px] text-slate-400 font-mono">{p.date}</span>
+                            </div>
+                            {p.waist_cm && (
+                              <span className="text-[11px] text-slate-400">{p.waist_cm} cm cintura</span>
+                            )}
+                            <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 italic">
+                              "{p.notes_cliente || 'Check-in semanal enviado.'}"
+                            </p>
+                          </div>
+                          <span className="text-[10px] text-emerald-400 font-medium">
+                            {isDemoMode ? 'Carlos Mendoza' : selectedClient?.full_name || 'Atleta'}
+                          </span>
                         </div>
-                        <span className="text-[10px] text-emerald-400 font-medium">Carlos Mendoza</span>
                       </div>
+                    ))
+                  ) : (
+                    <div className="col-span-full py-8 text-center text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-800/60">
+                      No hay check-ins registrados todavía. Cuando tus clientes suban su peso o fotos de evolución aparecerán aquí.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>

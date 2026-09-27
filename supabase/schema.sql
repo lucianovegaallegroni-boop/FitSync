@@ -130,12 +130,27 @@ ALTER TABLE public.progress_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_nutrition_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.login_history ENABLE ROW LEVEL SECURITY;
 
--- Políticas de Perfiles
-CREATE POLICY "Admins pueden gestionar todos los perfiles"
-  ON public.profiles FOR ALL
-  USING (
-    EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
+-- Función auxiliar para verificar si el usuario actual es administrador (evita recursión RLS)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
   );
+$$;
+
+-- Políticas de Perfiles
+CREATE POLICY "Admins pueden ver todos los perfiles"
+  ON public.profiles FOR SELECT
+  USING (public.is_admin());
+
+CREATE POLICY "Admins pueden actualizar cualquier perfil"
+  ON public.profiles FOR UPDATE
+  USING (public.is_admin());
 
 CREATE POLICY "Usuarios pueden ver su propio perfil" 
   ON public.profiles FOR SELECT 
@@ -149,9 +164,13 @@ CREATE POLICY "Usuarios pueden actualizar su propio perfil"
   ON public.profiles FOR UPDATE 
   USING (auth.uid() = id);
 
+CREATE POLICY "Entrenadores pueden actualizar datos de sus clientes"
+  ON public.profiles FOR UPDATE
+  USING (trainer_id = auth.uid() OR auth.uid() = id OR public.is_admin());
+
 CREATE POLICY "Inserción pública de perfiles al registrarse" 
   ON public.profiles FOR INSERT 
-  WITH CHECK (auth.uid() = id);
+  WITH CHECK (auth.uid() = id OR trainer_id = auth.uid() OR public.is_admin());
 
 -- Políticas de Login History
 CREATE POLICY "Admins pueden ver todo el historial de login"

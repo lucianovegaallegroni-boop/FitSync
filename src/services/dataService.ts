@@ -409,30 +409,44 @@ class LocalDataStore {
 const localStore = new LocalDataStore();
 
 export const dataService = {
+  isDemoMode: false,
+
+  setDemoMode(isDemo: boolean) {
+    this.isDemoMode = isDemo;
+  },
+
   // Obtener clientes del entrenador
   async getClients(trainerId: string): Promise<Profile[]> {
-    // Limpiar duplicados previos en memoria si existiesen
-    const uniqueLocal = localStore.clients.filter((c, idx, arr) =>
-      arr.findIndex(item => item.email.trim().toLowerCase() === c.email.trim().toLowerCase()) === idx
-    );
-    localStore.clients = uniqueLocal;
-
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('trainer_id', trainerId);
+        .eq('trainer_id', trainerId)
+        .order('created_at', { ascending: false });
 
-      if (error || !data || data.length === 0) {
-        return uniqueLocal;
+      if (!error && data) {
+        if (this.isDemoMode) {
+          const uniqueLocal = localStore.clients.filter((c, idx, arr) =>
+            arr.findIndex(item => item.email.trim().toLowerCase() === c.email.trim().toLowerCase()) === idx
+          );
+          const map = new Map<string, Profile>();
+          uniqueLocal.forEach(c => map.set(c.id, c));
+          data.forEach(c => map.set(c.id, c));
+          return Array.from(map.values());
+        }
+        // En modo REAL: retornar únicamente los clientes reales de Supabase
+        return data.filter((c, idx, arr) =>
+          arr.findIndex(item => item.email.trim().toLowerCase() === c.email.trim().toLowerCase()) === idx
+        );
       }
-      // Deduplicar datos remotos por email
-      return data.filter((c, idx, arr) =>
-        arr.findIndex(item => item.email.trim().toLowerCase() === c.email.trim().toLowerCase()) === idx
-      );
-    } catch {
-      return uniqueLocal;
+    } catch (e) {
+      console.warn('Error al obtener clientes de Supabase:', e);
     }
+
+    if (this.isDemoMode) {
+      return [...localStore.clients];
+    }
+    return [];
   },
 
   // Crear o invitar cliente generando credenciales seguras
@@ -538,13 +552,20 @@ export const dataService = {
         .eq('trainer_id', trainerId)
         .order('created_at', { ascending: false });
 
-      if (error || !data || data.length === 0) {
-        return localStore.workouts;
+      if (!error && data) {
+        if (this.isDemoMode && data.length === 0) {
+          return localStore.workouts;
+        }
+        return data;
       }
-      return data;
-    } catch {
+    } catch (e) {
+      console.warn('Error al obtener rutinas de Supabase:', e);
+    }
+
+    if (this.isDemoMode) {
       return localStore.workouts;
     }
+    return [];
   },
 
   // Crear rutina con ejercicios
@@ -659,8 +680,11 @@ export const dataService = {
       // Ignorar y caer a fallback
     }
 
-    const found = localStore.assignments.find(a => a.client_id === clientId);
-    return found || null;
+    if (this.isDemoMode) {
+      const found = localStore.assignments.find(a => a.client_id === clientId);
+      return found || null;
+    }
+    return null;
   },
 
   // Marcar rutina como completada
@@ -724,7 +748,10 @@ export const dataService = {
       // noop
     }
 
-    return localStore.nutrition[clientId] || null;
+    if (this.isDemoMode) {
+      return localStore.nutrition[clientId] || null;
+    }
+    return null;
   },
 
   // Guardar check-in de progreso semanal
@@ -760,14 +787,24 @@ export const dataService = {
         .eq('client_id', clientId)
         .order('date', { ascending: true });
 
-      if (!error && data && data.length > 0) return data;
+      if (!error && data) {
+        if (this.isDemoMode && data.length === 0) {
+          return localStore.progress
+            .filter(p => p.client_id === clientId)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        }
+        return data;
+      }
     } catch {
       // noop
     }
 
-    return localStore.progress
-      .filter(p => p.client_id === clientId)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    if (this.isDemoMode) {
+      return localStore.progress
+        .filter(p => p.client_id === clientId)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }
+    return [];
   },
 
   // Obtener o registrar nutrición diaria
@@ -844,16 +881,24 @@ export const dataService = {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        const map = new Map<string, Profile>();
-        localStore.users.forEach(u => map.set(u.id, u));
-        data.forEach(u => map.set(u.id, u));
-        return Array.from(map.values());
+      if (!error && data) {
+        if (this.isDemoMode) {
+          const map = new Map<string, Profile>();
+          localStore.users.forEach(u => map.set(u.id, u));
+          data.forEach(u => map.set(u.id, u));
+          return Array.from(map.values());
+        }
+        // En modo REAL: retornar única y exclusivamente los usuarios registrados en Supabase
+        return data;
       }
-    } catch {
-      // noop
+    } catch (e) {
+      console.warn('Error al obtener usuarios de Supabase:', e);
     }
-    return [...localStore.users];
+
+    if (this.isDemoMode) {
+      return [...localStore.users];
+    }
+    return [];
   },
 
   // Modificar perfil de usuario por el Admin
@@ -897,14 +942,15 @@ export const dataService = {
       const { data, error } = await supabase
         .from('login_history')
         .select('*')
-        .order('created_at', { ascending: true });
+        .order('logged_at', { ascending: true });
 
       if (!error && data && data.length > 0) {
         const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         const groupMap: Record<string, { month: string; year: number; logins: number; userIds: Set<string>; trainers: Set<string>; clients: Set<string> }> = {};
 
         data.forEach(item => {
-          const d = new Date(item.created_at);
+          const timestamp = item.logged_at || item.created_at || new Date().toISOString();
+          const d = new Date(timestamp);
           const monthStr = months[d.getMonth()];
           const year = d.getFullYear();
           const key = `${year}-${d.getMonth()}`;
@@ -920,7 +966,7 @@ export const dataService = {
             };
           }
           groupMap[key].logins += 1;
-          groupMap[key].userIds.add(item.user_id);
+          if (item.user_id) groupMap[key].userIds.add(item.user_id);
           if (item.role === 'trainer') groupMap[key].trainers.add(item.user_id);
           if (item.role === 'client') groupMap[key].clients.add(item.user_id);
         });
@@ -929,18 +975,21 @@ export const dataService = {
           month: g.month,
           year: g.year,
           logins: g.logins,
-          unique_users: g.userIds.size,
+          unique_users: g.userIds.size || 1,
           trainers: g.trainers.size,
           clients: g.clients.size,
         }));
 
         if (aggregated.length > 0) return aggregated;
       }
-    } catch {
-      // noop
+    } catch (e) {
+      console.warn('Error al obtener login_history de Supabase:', e);
     }
 
-    return [...localStore.loginStats];
+    if (this.isDemoMode) {
+      return [...localStore.loginStats];
+    }
+    return [];
   },
 
   // Registrar login de usuario
@@ -959,10 +1008,12 @@ export const dataService = {
     }
 
     try {
+      const isUUID = userId && userId.length === 36 && userId.includes('-');
       await supabase.from('login_history').insert([{
-        user_id: userId,
+        user_id: isUUID ? userId : null,
         email,
         role,
+        logged_at: now,
         created_at: now,
       }]);
     } catch {

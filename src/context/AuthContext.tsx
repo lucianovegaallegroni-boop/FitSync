@@ -62,11 +62,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         setUser(session.user);
         setIsDemoMode(false);
+        dataService.setDemoMode(false);
         fetchProfile(session.user.id, session.user.email || '');
       } else {
         setUser(null);
         setProfile(null);
         setIsDemoMode(false);
+        dataService.setDemoMode(false);
         setLoading(false);
       }
     });
@@ -75,10 +77,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         setUser(session.user);
         setIsDemoMode(false);
+        dataService.setDemoMode(false);
         await fetchProfile(session.user.id, session.user.email || '');
       } else if (!isDemoMode) {
         setUser(null);
         setProfile(null);
+        dataService.setDemoMode(false);
       }
       setLoading(false);
     });
@@ -176,6 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
         }
         setIsDemoMode(true);
+        dataService.setDemoMode(true);
         setUser({ id: matchedProfile.id, email: matchedProfile.email });
         setProfile(matchedProfile);
         await dataService.recordLogin(matchedProfile.id, matchedProfile.email, matchedProfile.role);
@@ -191,6 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
       setIsDemoMode(true);
+      dataService.setDemoMode(true);
       setUser({ id: 'admin-1', email: 'admin@fitsync.com' });
       setProfile(DEMO_ADMIN_PROFILE);
       await dataService.recordLogin('admin-1', 'admin@fitsync.com', 'admin');
@@ -249,6 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       setIsDemoMode(false);
+      dataService.setDemoMode(false);
       setUser(authData.user);
       if (userProfile) {
         setProfile(userProfile);
@@ -303,6 +310,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setProfile(null);
     setIsDemoMode(false);
+    dataService.setDemoMode(false);
     setLoading(false);
 
     return {
@@ -317,10 +325,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setProfile(null);
     setIsDemoMode(false);
+    dataService.setDemoMode(false);
   };
 
   const switchDemoRole = (role: UserRole) => {
     setIsDemoMode(true);
+    dataService.setDemoMode(true);
     if (role === 'admin') {
       setUser({ id: 'admin-1', email: 'admin@fitsync.com' });
       setProfile(DEMO_ADMIN_PROFILE);
