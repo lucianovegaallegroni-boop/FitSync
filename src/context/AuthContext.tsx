@@ -37,9 +37,9 @@ const DEMO_CLIENT_PROFILE: Profile = {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(DEMO_TRAINER_PROFILE);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
 
   useEffect(() => {
     // Verificar sesión existente en Supabase
@@ -49,10 +49,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsDemoMode(false);
         fetchProfile(session.user.id, session.user.email || '');
       } else {
-        // Iniciar en modo demo por defecto para que la app sea inmediatamente interactiva
-        setUser({ id: 'trainer-1', email: 'entrenador@fitsync.com' });
-        setProfile(DEMO_TRAINER_PROFILE);
-        setIsDemoMode(true);
+        setUser(null);
+        setProfile(null);
+        setIsDemoMode(false);
         setLoading(false);
       }
     });
@@ -156,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setUser(null);
     setProfile(null);
+    setIsDemoMode(false);
   };
 
   const switchDemoRole = (role: UserRole) => {
