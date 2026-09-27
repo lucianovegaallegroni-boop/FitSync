@@ -269,6 +269,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (email: string, pass: string, fullName: string, role: UserRole) => {
     const emailNorm = email.trim().toLowerCase();
 
+    const isClientRole = role === 'client';
+
     const { data, error } = await supabase.auth.signUp({
       email: emailNorm,
       password: pass,
@@ -276,6 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         data: {
           full_name: fullName,
           role,
+          is_active: isClientRole,
         },
       },
     });
@@ -284,16 +287,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error };
     }
 
-    // El nuevo usuario queda registrado como INACTIVO (pendiente de activación por el admin)
+    // Las cuentas de cliente se crean activas de manera predeterminada; otros roles quedan pendientes de admin
     const newProfile: Profile = {
       id: data?.user?.id || `user-${Date.now()}`,
       email: emailNorm,
       full_name: fullName.trim(),
       role,
-      is_active: false,
-      deactivation_reason: 'Cuenta pendiente de activación por un administrador',
+      is_active: isClientRole ? true : false,
+      deactivation_reason: isClientRole ? null : 'Cuenta pendiente de activación por un administrador',
       created_at: new Date().toISOString(),
-      last_login_at: null,
+      last_login_at: isClientRole ? new Date().toISOString() : null,
     };
 
     try {
@@ -302,16 +305,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Ignorar si el trigger ya lo insertó
     }
 
-    // Registrar en almacén de datos
-    dataService.registerPendingUser(newProfile, pass);
+    if (!isClientRole) {
+      // Registrar en almacén de datos como pendiente
+      dataService.registerPendingUser(newProfile, pass);
 
-    // Cerrar sesión inmediata para impedir ingreso sin aprobación del admin
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    setIsDemoMode(false);
-    dataService.setDemoMode(false);
-    setLoading(false);
+      // Cerrar sesión inmediata para impedir ingreso sin aprobación del admin
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      setIsDemoMode(false);
+      dataService.setDemoMode(false);
+      setLoading(false);
+    } else {
+      // Cliente queda activo e inicia sesión de inmediato
+      setUser(data?.user || { id: newProfile.id, email: newProfile.email });
+      setProfile(newProfile);
+      setIsDemoMode(false);
+      dataService.setDemoMode(false);
+      setLoading(false);
+      await dataService.recordLogin(newProfile.id, newProfile.email, 'client');
+    }
 
     return {
       error: null,

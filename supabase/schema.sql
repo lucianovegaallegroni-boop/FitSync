@@ -276,19 +276,70 @@ CREATE POLICY "Entrenadores ven los registros diarios de sus clientes"
 -- ==========================================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
+DECLARE
+  v_role text;
+  v_trainer_id uuid;
+  v_is_active boolean;
+  v_deactivation_reason text;
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name, role, is_active, deactivation_reason)
+  v_role := COALESCE(new.raw_user_meta_data->>'role', 'trainer');
+  
+  -- Las cuentas de cliente se crean activas de manera predeterminada
+  IF v_role = 'client' THEN
+    v_is_active := true;
+    v_deactivation_reason := NULL;
+  ELSE
+    -- Entrenadores u otros roles autoregistrados requieren activación de administrador
+    v_is_active := false;
+    v_deactivation_reason := 'Cuenta pendiente de activación por un administrador';
+  END IF;
+
+  BEGIN
+    v_trainer_id := (new.raw_user_meta_data->>'trainer_id')::uuid;
+  EXCEPTION WHEN OTHERS THEN
+    v_trainer_id := NULL;
+  END;
+
+  INSERT INTO public.profiles (
+    id,
+    email,
+    full_name,
+    role,
+    trainer_id,
+    phone,
+    medical_history,
+    goals,
+    is_active,
+    deactivation_reason
+  )
   VALUES (
     new.id,
     new.email,
     COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
-    COALESCE(new.raw_user_meta_data->>'role', 'trainer'),
-    false,
-    'Cuenta pendiente de activación por un administrador'
+    v_role,
+    v_trainer_id,
+    new.raw_user_meta_data->>'phone',
+    new.raw_user_meta_data->>'medical_history',
+    new.raw_user_meta_data->>'goals',
+    v_is_active,
+    v_deactivation_reason
   )
   ON CONFLICT (id) DO UPDATE SET
     full_name = EXCLUDED.full_name,
-    role = EXCLUDED.role;
+    role = EXCLUDED.role,
+    trainer_id = COALESCE(EXCLUDED.trainer_id, public.profiles.trainer_id),
+    phone = COALESCE(EXCLUDED.phone, public.profiles.phone),
+    goals = COALESCE(EXCLUDED.goals, public.profiles.goals),
+    medical_history = COALESCE(EXCLUDED.medical_history, public.profiles.medical_history),
+    is_active = CASE 
+      WHEN EXCLUDED.role = 'client' THEN true 
+      ELSE public.profiles.is_active 
+    END,
+    deactivation_reason = CASE 
+      WHEN EXCLUDED.role = 'client' THEN NULL 
+      ELSE public.profiles.deactivation_reason 
+    END;
+
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

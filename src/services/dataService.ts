@@ -464,6 +464,7 @@ export const dataService = {
     }
 
     let authUserId = `client-${Date.now()}`;
+    const isTrainerUUID = Boolean(clientData.trainer_id && clientData.trainer_id.length === 36 && clientData.trainer_id.includes('-'));
 
     // Intentar registrar usuario en Supabase auth de forma aislada sin cerrar la sesión del coach
     if (standaloneAuth && emailNorm) {
@@ -473,8 +474,13 @@ export const dataService = {
           password: generatedPassword,
           options: {
             data: {
-              full_name: clientData.full_name || emailNorm.split('@')[0],
+              full_name: clientData.full_name?.trim() || emailNorm.split('@')[0],
               role: 'client',
+              trainer_id: isTrainerUUID ? clientData.trainer_id : null,
+              phone: clientData.phone?.trim() || null,
+              medical_history: clientData.medical_history?.trim() || null,
+              goals: clientData.goals?.trim() || null,
+              is_active: true,
             },
           },
         });
@@ -491,11 +497,12 @@ export const dataService = {
       email: emailNorm,
       full_name: clientData.full_name?.trim() || emailNorm.split('@')[0],
       role: 'client',
-      trainer_id: clientData.trainer_id || 'trainer-1',
+      trainer_id: isTrainerUUID ? clientData.trainer_id! : (this.isDemoMode ? 'trainer-1' : null),
       phone: clientData.phone?.trim() || null,
       medical_history: clientData.medical_history?.trim() || null,
       goals: clientData.goals?.trim() || null,
-      is_active: true, // Activado directamente por su entrenador
+      is_active: true, // Las cuentas de cliente se crean activas de manera predeterminada
+      deactivation_reason: null,
       created_at: new Date().toISOString(),
       last_login_at: null,
     };
@@ -518,20 +525,36 @@ export const dataService = {
         }
       }
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .upsert([newClient], { onConflict: 'id' })
-        .select()
-        .single();
+      const isAuthUUID = Boolean(authUserId && authUserId.length === 36 && authUserId.includes('-'));
+      if (isAuthUUID) {
+        const payload = {
+          id: authUserId,
+          email: emailNorm,
+          full_name: newClient.full_name,
+          role: 'client',
+          trainer_id: isTrainerUUID ? clientData.trainer_id : null,
+          phone: newClient.phone,
+          medical_history: newClient.medical_history,
+          goals: newClient.goals,
+          is_active: true,
+          deactivation_reason: null,
+        };
 
-      if (!error && data) {
-        const idx = localStore.users.findIndex(u => u.id === data.id || u.email.toLowerCase() === emailNorm);
-        if (idx >= 0) {
-          localStore.users[idx] = data;
-        } else {
-          localStore.users.push(data);
+        const { data, error } = await supabase
+          .from('profiles')
+          .upsert([payload], { onConflict: 'id' })
+          .select()
+          .single();
+
+        if (!error && data) {
+          const idx = localStore.users.findIndex(u => u.id === data.id || u.email.toLowerCase() === emailNorm);
+          if (idx >= 0) {
+            localStore.users[idx] = data;
+          } else {
+            localStore.users.push(data);
+          }
+          return { client: data, generatedPassword };
         }
-        return { client: data, generatedPassword };
       }
     } catch (e: any) {
       if (e.message && e.message.includes('Ya existe')) {
