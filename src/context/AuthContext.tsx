@@ -137,17 +137,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     const emailNorm = email.trim().toLowerCase();
 
-    // 1. Verificar si la cuenta está desactivada o pendiente de activación
+    // 1. Verificar si el usuario existe y su estado de activación
     const status = await dataService.checkUserStatus(emailNorm);
-    if (status && status.allowed === false) {
+
+    // Caso A: El usuario no existe en la base de datos ni en el sistema
+    if (!status.exists) {
       setLoading(false);
-      const isPending = status.reason && status.reason.toLowerCase().includes('pendiente');
-      const reasonMsg = isPending
-        ? 'Tu cuenta ha sido creada exitosamente pero requiere ser aprobada y activada por un administrador antes de ingresar.'
-        : `Tu cuenta ha sido desactivada por un administrador.${status.reason ? ` Motivo: "${status.reason}".` : ''}`;
       return {
-        error: new Error(reasonMsg)
+        error: new Error(`No existe ningún usuario registrado con el correo "${email.trim()}". Por favor verifica que esté bien escrito o regístrate en la plataforma.`)
       };
+    }
+
+    // Caso B: El usuario existe pero su cuenta aún no está activada o fue suspendida
+    if (status.isActive === false) {
+      setLoading(false);
+      if (status.isPending) {
+        return {
+          error: new Error('Tu cuenta aún no ha sido activada por un administrador. Debes esperar a que sea aprobada antes de poder ingresar.')
+        };
+      } else {
+        const reasonDetail = status.reason ? ` Motivo: "${status.reason}".` : '';
+        return {
+          error: new Error(`Tu cuenta ha sido desactivada por un administrador.${reasonDetail}`)
+        };
+      }
     }
 
     // 2. Si las credenciales fueron generadas para el cliente o coinciden en el almacén seguro
@@ -157,8 +170,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (matchedProfile) {
         if (matchedProfile.is_active === false) {
           setLoading(false);
+          const isPending = matchedProfile.deactivation_reason?.toLowerCase().includes('pendiente');
           return {
-            error: new Error('Esta cuenta se encuentra pendiente de activación o desactivada por un administrador.')
+            error: new Error(
+              isPending
+                ? 'Tu cuenta aún no ha sido activada por un administrador. Debes esperar a que sea aprobada antes de poder ingresar.'
+                : `Tu cuenta ha sido desactivada por un administrador.${matchedProfile.deactivation_reason ? ` Motivo: "${matchedProfile.deactivation_reason}".` : ''}`
+            )
           };
         }
         setIsDemoMode(true);
@@ -170,8 +188,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    // 3. Si es cuenta admin
+    // 3. Cuenta de prueba admin
     if (emailNorm === 'admin@fitsync.com') {
+      if (pass !== 'admin123') {
+        setLoading(false);
+        return {
+          error: new Error('La contraseña ingresada es incorrecta. Por favor verifica tu clave e inténtalo nuevamente.')
+        };
+      }
       setIsDemoMode(true);
       setUser({ id: 'admin-1', email: 'admin@fitsync.com' });
       setProfile(DEMO_ADMIN_PROFILE);
@@ -188,7 +212,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) {
       setLoading(false);
-      return { error };
+      const msg = error.message?.toLowerCase() || '';
+      const isCredsError = msg.includes('invalid login credentials') ||
+                           msg.includes('invalid credentials') ||
+                           (error as any).code === 'invalid_credentials';
+      
+      // Al haber confirmado previamente que el usuario SÍ existe y SÍ está activo, la falla es por contraseña errónea
+      if (isCredsError) {
+        return {
+          error: new Error('La contraseña ingresada es incorrecta. Por favor verifica tu clave e inténtalo nuevamente.')
+        };
+      }
+      return {
+        error: new Error(error.message || 'Error al iniciar sesión.')
+      };
     }
 
     if (authData?.user) {
@@ -205,7 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
         const isPending = userProfile.deactivation_reason && userProfile.deactivation_reason.toLowerCase().includes('pendiente');
         const reasonMsg = isPending
-          ? 'Tu cuenta ha sido registrada pero requiere ser activada por un administrador antes de ingresar.'
+          ? 'Tu cuenta aún no ha sido activada por un administrador. Debes esperar a que sea aprobada antes de poder ingresar.'
           : `Tu cuenta ha sido desactivada por un administrador.${userProfile.deactivation_reason ? ` Motivo: "${userProfile.deactivation_reason}".` : ''}`;
         return {
           error: new Error(reasonMsg)

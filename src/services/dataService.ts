@@ -970,44 +970,86 @@ export const dataService = {
     }
   },
 
-  // Verificar si un usuario está activo antes de permitir login
-  async checkUserStatus(email: string): Promise<{ allowed: boolean; reason?: string; profile?: Profile }> {
+  // Verificar si un usuario existe y su estado de activación antes de permitir login
+  async checkUserStatus(email: string): Promise<{
+    exists: boolean;
+    isActive?: boolean;
+    isPending?: boolean;
+    reason?: string | null;
+    fullName?: string;
+    role?: string;
+  }> {
     const norm = email.trim().toLowerCase();
 
+    // 1. Intentar llamar al RPC seguro de Supabase
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', norm)
-        .maybeSingle();
+      const { data: rpcData, error: rpcError } = await supabase.rpc('check_user_status', {
+        user_email: norm,
+      });
 
-      if (!error && data) {
-        if (data.is_active === false) {
+      if (!rpcError && rpcData && typeof rpcData === 'object') {
+        if (rpcData.exists === true) {
+          const isPending = !!(
+            rpcData.deactivation_reason &&
+            rpcData.deactivation_reason.toLowerCase().includes('pendiente')
+          );
           return {
-            allowed: false,
-            reason: data.deactivation_reason || 'Esta cuenta ha sido desactivada por un administrador.',
-            profile: data,
+            exists: true,
+            isActive: rpcData.is_active !== false,
+            isPending,
+            reason: rpcData.deactivation_reason,
+            fullName: rpcData.full_name,
+            role: rpcData.role,
           };
+        } else if (rpcData.exists === false) {
+          // Si no está en Supabase, verificar si es una cuenta de demo / local
+          const localUser = localStore.users.find(u => u.email.trim().toLowerCase() === norm);
+          if (localUser) {
+            const isPending = !!(
+              localUser.deactivation_reason &&
+              localUser.deactivation_reason.toLowerCase().includes('pendiente')
+            );
+            return {
+              exists: true,
+              isActive: localUser.is_active !== false,
+              isPending,
+              reason: localUser.deactivation_reason,
+              fullName: localUser.full_name,
+              role: localUser.role,
+            };
+          }
+          if (localStore.credentials[norm]) {
+            return { exists: true, isActive: true };
+          }
+          return { exists: false };
         }
-        return { allowed: true, profile: data };
       }
-    } catch {
-      // noop
+    } catch (err) {
+      console.warn('Fallback en checkUserStatus:', err);
     }
 
+    // 2. Fallback a tienda local de datos y credenciales
     const localUser = localStore.users.find(u => u.email.trim().toLowerCase() === norm);
     if (localUser) {
-      if (localUser.is_active === false) {
-        return {
-          allowed: false,
-          reason: localUser.deactivation_reason || 'Esta cuenta ha sido desactivada por un administrador.',
-          profile: localUser,
-        };
-      }
-      return { allowed: true, profile: localUser };
+      const isPending = !!(
+        localUser.deactivation_reason &&
+        localUser.deactivation_reason.toLowerCase().includes('pendiente')
+      );
+      return {
+        exists: true,
+        isActive: localUser.is_active !== false,
+        isPending,
+        reason: localUser.deactivation_reason,
+        fullName: localUser.full_name,
+        role: localUser.role,
+      };
     }
 
-    return { allowed: true };
+    if (localStore.credentials[norm]) {
+      return { exists: true, isActive: true };
+    }
+
+    return { exists: false };
   },
 
   // Obtener credenciales generadas para un cliente

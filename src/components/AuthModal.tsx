@@ -71,9 +71,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {errorMsg && (
-          <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-2 text-rose-300 text-xs">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{errorMsg}</span>
+          <div
+            className={`mb-4 p-3.5 rounded-xl border flex items-start gap-2.5 text-xs text-left animate-fadeIn ${
+              errorMsg.toLowerCase().includes('activada') || errorMsg.toLowerCase().includes('pendiente')
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+            }`}
+          >
+            <AlertCircle
+              className={`h-4 w-4 shrink-0 mt-0.5 ${
+                errorMsg.toLowerCase().includes('activada') || errorMsg.toLowerCase().includes('pendiente')
+                  ? 'text-amber-400'
+                  : 'text-rose-400'
+              }`}
+            />
+            <span className="leading-relaxed font-medium">{errorMsg}</span>
           </div>
         )}
 

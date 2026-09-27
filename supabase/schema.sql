@@ -293,3 +293,53 @@ CREATE POLICY "Subida de fotos de progreso para usuarios autenticados"
 CREATE POLICY "Lectura pública o autenticada de fotos de progreso"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'progress-photos');
+
+-- ==========================================================
+-- RPC: Verificar estado de cuenta de usuario antes de login
+-- ==========================================================
+CREATE OR REPLACE FUNCTION public.check_user_status(user_email text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_profile public.profiles%ROWTYPE;
+  v_exists_in_auth boolean;
+BEGIN
+  -- 1. Buscar en perfiles
+  SELECT * INTO v_profile
+  FROM public.profiles
+  WHERE LOWER(email) = LOWER(TRIM(user_email))
+  LIMIT 1;
+
+  IF FOUND THEN
+    RETURN jsonb_build_object(
+      'exists', true,
+      'is_active', v_profile.is_active,
+      'deactivation_reason', v_profile.deactivation_reason,
+      'full_name', v_profile.full_name,
+      'role', v_profile.role
+    );
+  END IF;
+
+  -- 2. Si no está en profiles, verificar si existe en auth.users
+  SELECT EXISTS(
+    SELECT 1 FROM auth.users WHERE LOWER(email) = LOWER(TRIM(user_email))
+  ) INTO v_exists_in_auth;
+
+  IF v_exists_in_auth THEN
+    RETURN jsonb_build_object(
+      'exists', true,
+      'is_active', false,
+      'deactivation_reason', 'Cuenta pendiente de activación por un administrador'
+    );
+  END IF;
+
+  RETURN jsonb_build_object(
+    'exists', false
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.check_user_status(text) TO anon, authenticated, service_role;
+
