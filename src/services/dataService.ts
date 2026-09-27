@@ -101,7 +101,7 @@ const INITIAL_DEMO_NUTRITION: Record<string, NutritionGoal> = {
   },
 };
 
-const INITIAL_DEMO_PROGRESS: ProgressLog[] = [
+export const INITIAL_DEMO_PROGRESS: ProgressLog[] = [
   {
     id: 'prog-1',
     client_id: 'client-1',

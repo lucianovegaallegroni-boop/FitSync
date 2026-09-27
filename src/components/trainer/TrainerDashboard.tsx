@@ -16,10 +16,14 @@ import {
   Phone,
   FileText,
   Weight,
-  Loader2
+  Loader2,
+  Search,
+  Target,
+  CheckCircle2,
+  ArrowUpRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { dataService } from '../../services/dataService';
+import { dataService, INITIAL_DEMO_PROGRESS } from '../../services/dataService';
 import { Profile, Workout, ProgressLog, NutritionGoal } from '../../types/database';
 
 export const TrainerDashboard: React.FC = () => {
@@ -31,6 +35,7 @@ export const TrainerDashboard: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState<Profile | null>(null);
   const [clientProgress, setClientProgress] = useState<ProgressLog[]>([]);
   const [clientNutrition, setClientNutrition] = useState<NutritionGoal | null>(null);
+  const [clientSearch, setClientSearch] = useState('');
 
   // Estados de formularios y modales
   const [showAddClientModal, setShowAddClientModal] = useState(false);
@@ -393,56 +398,363 @@ export const TrainerDashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* TAB 1: OVERVIEW & CLIENT LIST */}
-      {(activeTab === 'overview' || activeTab === 'clients') && (
+      {/* TAB 1: RESUMEN GENERAL (EXECUTIVE COACH OVERVIEW) */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* Quick Action Hub */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-white text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-emerald-400" />
+                  Panel de Control Diario
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Resumen de actividad en tiempo real, estado de adherencia y alertas de tus clientes.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setShowAddClientModal(true)}
+                  className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs transition-colors shadow-lg shadow-emerald-500/20"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Nuevo Atleta</span>
+                </button>
+                <button
+                  onClick={() => setShowWorkoutModal(true)}
+                  className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors"
+                >
+                  <Dumbbell className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Nueva Rutina</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left 8 Cols: Live Daily Athlete Activity & Status */}
+            <div className="lg:col-span-8 space-y-6">
+              {/* Daily Athlete Status Feed */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Estado Diario de Atletas</h4>
+                    <p className="text-xs text-slate-400">Cumplimiento de entrenamientos y nutrición de hoy</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('clients')}
+                    className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
+                  >
+                    <span>Ver todos</span>
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {clients.map(c => {
+                    const isInactive = c.id === 'client-3';
+                    const hasNutrition = c.id === 'client-1' || c.id === 'client-2';
+
+                    return (
+                      <div
+                        key={c.id}
+                        className={`p-4 rounded-xl border transition-all ${
+                          isInactive
+                            ? 'bg-rose-500/5 border-rose-500/30'
+                            : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                              isInactive ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'
+                            }`}>
+                              {c.full_name.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h5 className="font-bold text-white text-sm">{c.full_name}</h5>
+                                {isInactive ? (
+                                  <span className="text-[10px] bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded-full font-semibold border border-rose-500/30 flex items-center gap-1">
+                                    <Clock className="h-3 w-3" /> Inactivo hace 4 días
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-semibold border border-emerald-500/30 flex items-center gap-1">
+                                    <CheckCircle2 className="h-3 w-3" /> Al día
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-400 mt-1 line-clamp-1">
+                                <strong className="text-slate-300">Meta:</strong> {c.goals || 'Sin objetivo definido'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-end sm:self-center">
+                            <button
+                              onClick={() => {
+                                handleSelectClient(c);
+                                setActiveTab('clients');
+                              }}
+                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 rounded-lg transition-colors border border-slate-700"
+                            >
+                              Ficha Técnica
+                            </button>
+                            {isInactive ? (
+                              <a
+                                href={`https://wa.me/${(c.phone || '').replace(/[^0-9]/g, '')}?text=Hola%20${encodeURIComponent(c.full_name.split(' ')[0])},%20¿cómo%20va%20la%20semana?%20Recuerda%20hacer%20tu%20check-in%20en%20FitSync.`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-xs font-bold text-white rounded-lg transition-colors flex items-center gap-1"
+                              >
+                                <span>Recordar</span>
+                              </a>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setSelectedClient(c);
+                                  setActiveTab('workouts');
+                                }}
+                                className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-bold text-emerald-400 border border-emerald-500/30 rounded-lg transition-colors"
+                              >
+                                Rutina
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Sub-bar with nutrition & check-in info */}
+                        <div className="mt-3 pt-3 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+                          <div>
+                            <span className="text-slate-500 block">Plan Nutricional:</span>
+                            <span className="text-slate-300 font-medium">
+                              {hasNutrition ? (c.id === 'client-1' ? '2200 kcal (165g P)' : '1800 kcal (130g P)') : 'Sin asignar'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 block">Entrenamiento:</span>
+                            <span className="text-slate-300 font-medium">
+                              {isInactive ? 'Pendiente' : 'Completado hoy'}
+                            </span>
+                          </div>
+                          <div className="col-span-2 sm:col-span-1">
+                            <span className="text-slate-500 block">Último Peso:</span>
+                            <span className="text-emerald-400 font-bold font-mono">
+                              {c.id === 'client-1' ? '82.2 kg (-2.3kg)' : c.id === 'client-3' ? '79.0 kg' : '64.0 kg'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Recent Progress Check-ins Preview */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Weight className="h-4 w-4 text-emerald-400" />
+                    <div>
+                      <h4 className="font-bold text-white text-base">Últimos Check-ins Recibidos</h4>
+                      <p className="text-xs text-slate-400">Pesajes y fotos enviadas por los atletas esta semana</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('analytics')}
+                    className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
+                  >
+                    <span>Ver galería</span>
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {INITIAL_DEMO_PROGRESS.slice(2, 4).map(p => (
+                    <div key={p.id} className="bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex gap-3 p-3">
+                      {p.url_foto_frente ? (
+                        <img
+                          src={p.url_foto_frente}
+                          alt="Progreso atleta"
+                          className="h-20 w-16 rounded-lg object-cover border border-slate-700 shrink-0"
+                        />
+                      ) : (
+                        <div className="h-20 w-16 rounded-lg bg-slate-900 flex items-center justify-center text-slate-500 shrink-0">
+                          <Weight className="h-5 w-5" />
+                        </div>
+                      )}
+                      <div className="flex-1 flex flex-col justify-between text-xs">
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-white text-sm">{p.weight} kg</span>
+                            <span className="text-[10px] text-slate-400 font-mono">{p.date}</span>
+                          </div>
+                          {p.waist_cm && (
+                            <span className="text-[11px] text-slate-400">{p.waist_cm} cm cintura</span>
+                          )}
+                          <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 italic">
+                            "{p.notes_cliente || 'Check-in semanal enviado.'}"
+                          </p>
+                        </div>
+                        <span className="text-[10px] text-emerald-400 font-medium">Carlos Mendoza</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right 4 Cols: Adherence & Quick Breakdown */}
+            <div className="lg:col-span-4 space-y-6">
+              {/* Adherence Rate Card */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Adherencia del Equipo</span>
+                  <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
+                    Semana Actual
+                  </span>
+                </div>
+
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-extrabold text-white">88%</span>
+                  <span className="text-xs text-emerald-400 font-medium flex items-center">
+                    <TrendingUp className="h-3.5 w-3.5 mr-0.5" /> +4% vs mes anterior
+                  </span>
+                </div>
+
+                <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                  <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full" style={{ width: '88%' }}></div>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-800 text-xs">
+                  <div className="flex justify-between text-slate-300">
+                    <span className="text-slate-400">Entrenamientos realizados:</span>
+                    <span className="font-semibold text-white">22 de 25</span>
+                  </div>
+                  <div className="flex justify-between text-slate-300">
+                    <span className="text-slate-400">Metas de macros cumplidas:</span>
+                    <span className="font-semibold text-white">84%</span>
+                  </div>
+                  <div className="flex justify-between text-slate-300">
+                    <span className="text-slate-400">Check-ins semanales recibidos:</span>
+                    <span className="font-semibold text-white">2 de 3</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Goals Distribution */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <Target className="h-4 w-4 text-emerald-400" />
+                  <span>Distribución de Objetivos</span>
+                </div>
+
+                <div className="space-y-2.5 pt-1 text-xs">
+                  <div>
+                    <div className="flex justify-between text-slate-300 mb-1">
+                      <span>Pérdida de Grasa & Definición</span>
+                      <span className="font-bold text-white">1 atleta</span>
+                    </div>
+                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-amber-400 h-full rounded-full" style={{ width: '33%' }}></div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-slate-300 mb-1">
+                      <span>Hipertrofia & Ganancia Muscular</span>
+                      <span className="font-bold text-white">1 atleta</span>
+                    </div>
+                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-emerald-400 h-full rounded-full" style={{ width: '33%' }}></div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-slate-300 mb-1">
+                      <span>Tonificación & Resistencia</span>
+                      <span className="font-bold text-white">1 atleta</span>
+                    </div>
+                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-sky-400 h-full rounded-full" style={{ width: '33%' }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: GESTIÓN DE CLIENTES (FICHA TÉCNICA Y CRM) */}
+      {activeTab === 'clients' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Client List */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-white text-base">Tus Clientes</h3>
+          {/* Client List with Search */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-white text-base">Directorio de Clientes</h3>
               <button
                 onClick={() => setShowAddClientModal(true)}
-                className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium"
+                className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold"
               >
                 <Plus className="h-3.5 w-3.5" /> Agregar
               </button>
             </div>
-            <div className="space-y-2.5">
-              {clients.map(c => {
-                const isSelected = selectedClient?.id === c.id;
-                const isAlert = c.id === 'client-3';
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => handleSelectClient(c)}
-                    className={`w-full text-left p-3.5 rounded-xl border transition-all flex items-center justify-between ${
-                      isSelected
-                        ? 'bg-emerald-500/10 border-emerald-500/50 shadow-md shadow-emerald-500/5'
-                        : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-xs ${
-                        isAlert ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-800 text-slate-200'
-                      }`}>
-                        {c.full_name.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-white">{c.full_name}</p>
-                          {isAlert && (
-                            <span className="text-[10px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-medium">
-                              Inactivo
-                            </span>
-                          )}
+
+            {/* Buscador */}
+            <div className="relative">
+              <Search className="h-3.5 w-3.5 text-slate-500 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={clientSearch}
+                onChange={(e) => setClientSearch(e.target.value)}
+                placeholder="Buscar por nombre o correo..."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="space-y-2.5 max-h-[600px] overflow-y-auto scrollbar-thin pr-1">
+              {clients
+                .filter(c => 
+                  c.full_name.toLowerCase().includes(clientSearch.toLowerCase()) || 
+                  c.email.toLowerCase().includes(clientSearch.toLowerCase())
+                )
+                .map(c => {
+                  const isSelected = selectedClient?.id === c.id;
+                  const isAlert = c.id === 'client-3';
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => handleSelectClient(c)}
+                      className={`w-full text-left p-3.5 rounded-xl border transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'bg-emerald-500/10 border-emerald-500/50 shadow-md shadow-emerald-500/5'
+                          : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-xs ${
+                          isAlert ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-800 text-slate-200'
+                        }`}>
+                          {c.full_name.charAt(0)}
                         </div>
-                        <p className="text-xs text-slate-400">{c.email}</p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-white">{c.full_name}</p>
+                            {isAlert && (
+                              <span className="text-[10px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-medium">
+                                Inactivo
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400">{c.email}</p>
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight className={`h-4 w-4 ${isSelected ? 'text-emerald-400' : 'text-slate-600'}`} />
-                  </button>
-                );
-              })}
+                      <ChevronRight className={`h-4 w-4 ${isSelected ? 'text-emerald-400' : 'text-slate-600'}`} />
+                    </button>
+                  );
+                })}
             </div>
           </div>
 
