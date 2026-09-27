@@ -201,7 +201,8 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // Valor máximo para la escala del gráfico
-  const maxLogins = Math.max(...loginStats.map((s) => s.logins), 1000);
+  const peakLogins = Math.max(...loginStats.map((s) => s.logins), 100);
+  const maxLogins = Math.ceil(peakLogins / 100) * 100;
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -357,61 +358,107 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Visual Bar Chart */}
-        <div className="pt-8 pb-4">
-          <div className="h-64 sm:h-72 w-full flex items-end justify-between gap-2 sm:gap-6 border-b border-slate-800 px-2 sm:px-6">
-            {loginStats.map((stat) => {
-              const heightPercentage = Math.round((stat.logins / maxLogins) * 100);
-              const isSelected = selectedMonth?.month === stat.month && selectedMonth?.year === stat.year;
+        <div className="pt-6 pb-2">
+          {/* Main Chart Container with Y-Axis and Plot Area */}
+          <div className="flex gap-2 sm:gap-4 items-stretch">
+            {/* Y-Axis Labels */}
+            <div className="h-64 sm:h-72 flex flex-col justify-between text-[10px] text-slate-500 font-mono pr-1 select-none text-right w-8 sm:w-10 pb-1">
+              <span>{maxLogins}</span>
+              <span>{Math.round(maxLogins * 0.75)}</span>
+              <span>{Math.round(maxLogins * 0.5)}</span>
+              <span>{Math.round(maxLogins * 0.25)}</span>
+              <span>0</span>
+            </div>
 
-              return (
-                <div
-                  key={`${stat.year}-${stat.month}`}
-                  onClick={() => setSelectedMonth(stat)}
-                  className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer"
-                >
-                  {/* Tooltip visible on hover */}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity mb-2 bg-slate-950 border border-slate-700 text-slate-200 text-[10px] rounded-lg px-2.5 py-1.5 shadow-2xl pointer-events-none whitespace-nowrap text-center z-20">
-                    <p className="font-bold text-white">{stat.month} {stat.year}</p>
-                    <p className="text-purple-400 font-extrabold">{stat.logins} accesos</p>
-                    <p className="text-slate-400">{stat.trainers} coaches • {stat.clients} atletas</p>
-                  </div>
+            {/* Plot Area with Grid Lines and Proportional Bars */}
+            <div className="flex-1 relative h-64 sm:h-72 border-b border-l border-slate-800 rounded-bl-lg">
+              {/* Background Horizontal Grid Lines */}
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                <div className="border-t border-slate-800/40 w-full" />
+                <div className="border-t border-slate-800/40 w-full" />
+                <div className="border-t border-slate-800/40 w-full" />
+                <div className="border-t border-slate-800/40 w-full" />
+                <div className="w-full" />
+              </div>
 
-                  {/* Value badge over bar */}
-                  <span
-                    className={`text-[10px] sm:text-xs font-semibold mb-1 transition-all ${
-                      isSelected ? 'text-purple-300 font-bold scale-110' : 'text-slate-400 group-hover:text-white'
-                    }`}
-                  >
-                    {stat.logins}
-                  </span>
+              {/* Columns & Proportional Bars */}
+              <div className="absolute inset-0 flex items-end justify-around px-2 sm:px-4">
+                {loginStats.map((stat) => {
+                  const heightPercentage = Math.round((stat.logins / maxLogins) * 100);
+                  const isSelected = selectedMonth?.month === stat.month && selectedMonth?.year === stat.year;
 
-                  {/* Bar Container */}
-                  <div className="w-full max-w-[48px] bg-slate-800/40 rounded-t-xl overflow-hidden flex flex-col justify-end p-0.5">
-                    {/* The bar element */}
+                  return (
                     <div
-                      style={{ height: `${Math.max(heightPercentage, 6)}%` }}
-                      className={`w-full rounded-t-lg transition-all duration-500 relative ${
+                      key={`${stat.year}-${stat.month}`}
+                      onClick={() => setSelectedMonth(stat)}
+                      className="flex-1 h-full max-w-[56px] flex flex-col justify-end items-center group cursor-pointer relative z-10 px-1 sm:px-1.5"
+                    >
+                      {/* Floating Tooltip */}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full mb-3 left-1/2 -translate-x-1/2 bg-slate-950/95 border border-purple-500/40 text-slate-200 text-[10px] rounded-xl px-3 py-2 shadow-2xl pointer-events-none whitespace-nowrap text-center z-30 backdrop-blur-md">
+                        <p className="font-bold text-white text-xs">{stat.month} {stat.year}</p>
+                        <p className="text-purple-400 font-black text-sm">{stat.logins} accesos</p>
+                        <p className="text-slate-400 text-[10px] mt-0.5">
+                          {stat.trainers} coaches • {stat.clients} atletas
+                        </p>
+                      </div>
+
+                      {/* Value label directly above bar */}
+                      <span
+                        className={`text-[10px] sm:text-xs font-bold mb-1.5 transition-all select-none ${
+                          isSelected
+                            ? 'text-purple-300 scale-110'
+                            : 'text-slate-400 group-hover:text-white'
+                        }`}
+                      >
+                        {stat.logins}
+                      </span>
+
+                      {/* Bar Track & Fill with Relative Height */}
+                      <div
+                        style={{ height: `${Math.max(heightPercentage, 5)}%` }}
+                        className={`w-full rounded-t-xl transition-all duration-500 relative flex flex-col justify-between overflow-hidden shadow-lg ${
+                          isSelected
+                            ? 'bg-gradient-to-t from-purple-700 via-purple-500 to-emerald-400 shadow-purple-500/40 ring-2 ring-purple-400/60'
+                            : 'bg-gradient-to-t from-purple-900/80 via-purple-600/90 to-emerald-400/90 group-hover:from-purple-600 group-hover:via-purple-500 group-hover:to-teal-300 group-hover:shadow-purple-500/30'
+                        }`}
+                      >
+                        {/* Top highlight bar cap */}
+                        <div className="w-full h-1 bg-white/50" />
+
+                        {/* Shimmer overlay on hover */}
+                        <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors pointer-events-none" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* X-Axis Month Labels */}
+          <div className="flex gap-2 sm:gap-4 pl-8 sm:pl-10 pt-2.5">
+            <div className="flex-1 flex justify-around px-2 sm:px-4">
+              {loginStats.map((stat) => {
+                const isSelected = selectedMonth?.month === stat.month && selectedMonth?.year === stat.year;
+                return (
+                  <div
+                    key={`label-${stat.year}-${stat.month}`}
+                    onClick={() => setSelectedMonth(stat)}
+                    className="flex-1 max-w-[56px] text-center cursor-pointer"
+                  >
+                    <span
+                      className={`text-[11px] sm:text-xs font-semibold transition-colors block ${
                         isSelected
-                          ? 'bg-gradient-to-t from-purple-600 via-purple-500 to-emerald-400 shadow-lg shadow-purple-500/30'
-                          : 'bg-gradient-to-t from-slate-700 via-purple-600/70 to-emerald-500/80 group-hover:from-purple-600 group-hover:to-teal-400'
+                          ? 'text-purple-400 font-bold underline underline-offset-4'
+                          : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      {/* Top highlight cap */}
-                      <div className="w-full h-1 bg-white/40 rounded-t-lg" />
-                    </div>
+                      {stat.month}
+                    </span>
                   </div>
-
-                  {/* Month Label */}
-                  <span
-                    className={`mt-3 text-[11px] sm:text-xs font-medium transition-colors ${
-                      isSelected ? 'text-purple-400 font-bold' : 'text-slate-400 group-hover:text-slate-200'
-                    }`}
-                  >
-                    {stat.month}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           {/* Chart footer legend */}
