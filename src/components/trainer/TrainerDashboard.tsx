@@ -745,27 +745,29 @@ export const TrainerDashboard: React.FC = () => {
 
             {/* Custom SVG Line Chart for Weight Evolution */}
             {clientProgress.length > 0 ? (
-              <div className="bg-slate-950 p-6 rounded-xl border border-slate-800">
-                <div className="h-56 w-full flex items-end gap-6 sm:gap-12 justify-center pt-8 pb-4">
-                  {clientProgress.map((p) => {
-                    const minW = Math.min(...clientProgress.map(x => x.weight)) - 1;
-                    const maxW = Math.max(...clientProgress.map(x => x.weight)) + 1;
-                    const heightPercent = Math.max(15, Math.min(100, ((p.weight - minW) / (maxW - minW || 1)) * 100));
+              <div className="bg-slate-950 p-4 sm:p-6 rounded-xl border border-slate-800 overflow-hidden">
+                <div className="overflow-x-auto scrollbar-thin pb-2">
+                  <div className="h-56 min-w-[280px] w-full flex items-end gap-4 sm:gap-8 justify-center pt-8 pb-4 px-2">
+                    {clientProgress.map((p) => {
+                      const minW = Math.min(...clientProgress.map(x => x.weight)) - 1;
+                      const maxW = Math.max(...clientProgress.map(x => x.weight)) + 1;
+                      const heightPercent = Math.max(15, Math.min(100, ((p.weight - minW) / (maxW - minW || 1)) * 100));
 
-                    return (
-                      <div key={p.id} className="flex flex-col items-center gap-2 group">
-                        <span className="text-xs font-bold text-emerald-400 group-hover:scale-110 transition-transform">
-                          {p.weight} kg
-                        </span>
-                        <div className="w-8 sm:w-12 bg-emerald-500/20 rounded-t-lg relative flex items-end justify-center border-t-2 border-emerald-400 transition-all hover:bg-emerald-500/30" style={{ height: `${heightPercent * 1.5}px` }}>
-                          <span className="text-[10px] text-slate-400 mb-1">{p.waist_cm ? `${p.waist_cm}cm` : ''}</span>
+                      return (
+                        <div key={p.id} className="flex flex-col items-center gap-1.5 sm:gap-2 group shrink-0">
+                          <span className="text-[11px] sm:text-xs font-bold text-emerald-400 group-hover:scale-110 transition-transform">
+                            {p.weight} kg
+                          </span>
+                          <div className="w-8 sm:w-12 bg-emerald-500/20 rounded-t-lg relative flex items-end justify-center border-t-2 border-emerald-400 transition-all hover:bg-emerald-500/30" style={{ height: `${heightPercent * 1.5}px` }}>
+                            <span className="text-[9px] sm:text-[10px] text-slate-400 mb-1">{p.waist_cm ? `${p.waist_cm}cm` : ''}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono mt-1">
+                            {p.date.slice(5)}
+                          </span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-mono mt-1">
-                          {p.date.slice(5)}
-                        </span>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="text-center text-xs text-slate-500 mt-2">
                   Registro de peso corporal (kg) y cintura (cm) a lo largo de las semanas
@@ -929,21 +931,23 @@ export const TrainerDashboard: React.FC = () => {
                 </div>
 
                 {exercisesList.map((ex, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                    <div className="col-span-3">
+                  <div key={idx} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    <div className="sm:col-span-3">
+                      <label className="text-[10px] text-slate-400 block sm:hidden mb-1 font-medium">Día o Fase</label>
                       <input
                         type="text"
-                        placeholder="Día (ej. Día 1)"
+                        placeholder="Ej. Día 1"
                         value={ex.day_name}
                         onChange={(e) => {
                           const updated = [...exercisesList];
                           updated[idx].day_name = e.target.value;
                           setExercisesList(updated);
                         }}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-200"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200"
                       />
                     </div>
-                    <div className="col-span-4">
+                    <div className="sm:col-span-5">
+                      <label className="text-[10px] text-slate-400 block sm:hidden mb-1 font-medium">Ejercicio</label>
                       <input
                         type="text"
                         placeholder="Nombre ejercicio"
@@ -954,34 +958,38 @@ export const TrainerDashboard: React.FC = () => {
                           updated[idx].exercise_name = e.target.value;
                           setExercisesList(updated);
                         }}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-200"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200"
                       />
                     </div>
-                    <div className="col-span-2">
-                      <input
-                        type="number"
-                        placeholder="Series"
-                        value={ex.sets}
-                        onChange={(e) => {
-                          const updated = [...exercisesList];
-                          updated[idx].sets = Number(e.target.value);
-                          setExercisesList(updated);
-                        }}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-200 text-center"
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <input
-                        type="text"
-                        placeholder="Reps (ej. 10-12)"
-                        value={ex.reps}
-                        onChange={(e) => {
-                          const updated = [...exercisesList];
-                          updated[idx].reps = e.target.value;
-                          setExercisesList(updated);
-                        }}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-200 text-center"
-                      />
+                    <div className="grid grid-cols-2 gap-2 sm:col-span-4">
+                      <div>
+                        <label className="text-[10px] text-slate-400 block sm:hidden mb-1 font-medium">Series</label>
+                        <input
+                          type="number"
+                          placeholder="Series"
+                          value={ex.sets}
+                          onChange={(e) => {
+                            const updated = [...exercisesList];
+                            updated[idx].sets = Number(e.target.value);
+                            setExercisesList(updated);
+                          }}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 block sm:hidden mb-1 font-medium">Reps</label>
+                        <input
+                          type="text"
+                          placeholder="Reps"
+                          value={ex.reps}
+                          onChange={(e) => {
+                            const updated = [...exercisesList];
+                            updated[idx].reps = e.target.value;
+                            setExercisesList(updated);
+                          }}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 text-center"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}

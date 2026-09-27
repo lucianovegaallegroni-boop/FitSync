@@ -143,10 +143,10 @@ export const ClientPortal: React.FC = () => {
     : null;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-12">
-      {/* Mobile-First Header */}
+    <div className="max-w-6xl mx-auto space-y-6 pb-12">
+      {/* Header adaptable a móvil y escritorio */}
       <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-900 border border-emerald-500/20 rounded-2xl p-5 sm:p-6 relative overflow-hidden shadow-xl">
-        <div className="relative z-10 flex items-center justify-between">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold mb-2">
               <Sparkles className="h-3 w-3" /> Plan Personalizado
@@ -160,10 +160,10 @@ export const ClientPortal: React.FC = () => {
           </div>
           <button
             onClick={() => setShowCheckinModal(true)}
-            className="flex flex-col items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all shadow-lg shadow-emerald-500/20 shrink-0"
+            className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-lg shadow-emerald-500/20 self-start sm:self-auto"
           >
-            <Camera className="h-4 w-4 mb-0.5" />
-            <span>Check-in</span>
+            <Camera className="h-4 w-4" />
+            <span>Realizar Check-in Semanal</span>
           </button>
         </div>
 
@@ -177,6 +177,11 @@ export const ClientPortal: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Grid responsivo: 1 columna en móvil, 2 columnas en pantallas medianas/grandes */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Columna Izquierda: Qué hacer hoy & Nutrición */}
+        <div className="lg:col-span-7 space-y-6">
 
       {/* SECCIÓN 1: QUÉ TENGO QUE HACER HOY (REQUERIMIENTO 3.2 DEL PLAN) */}
       <div className="space-y-4">
@@ -380,50 +385,57 @@ export const ClientPortal: React.FC = () => {
               </button>
             </div>
           </div>
+          </div>
         </div>
-      </div>
+        {/* Fin Columna Izquierda */}
+        </div>
 
-      {/* SECCIÓN 3: HISTORIAL DE CHECK-INS Y EVOLUCIÓN */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400">
-          Tus Últimos Check-ins Semanales
-        </h2>
+        {/* Columna Derecha: Historial de Progreso & Check-ins */}
+        <div className="lg:col-span-5 space-y-6">
+          <div className="space-y-3">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400">
+              Tus Últimos Check-ins Semanales
+            </h2>
 
-        <div className="space-y-2.5">
-          {progressLogs.map(log => (
-            <div key={log.id} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {log.url_foto_frente ? (
-                  <img
-                    src={log.url_foto_frente}
-                    alt="Foto check-in"
-                    className="h-12 w-12 rounded-xl object-cover border border-slate-700 shrink-0"
-                  />
-                ) : (
-                  <div className="h-12 w-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                    <Camera className="h-5 w-5" />
-                  </div>
-                )}
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-white">{log.weight} kg</span>
-                    {log.waist_cm && (
-                      <span className="text-[11px] text-slate-400 font-mono">({log.waist_cm} cm cintura)</span>
+            <div className="space-y-2.5">
+              {progressLogs.map(log => (
+                <div key={log.id} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {log.url_foto_frente ? (
+                      <img
+                        src={log.url_foto_frente}
+                        alt="Foto check-in"
+                        className="h-12 w-12 rounded-xl object-cover border border-slate-700 shrink-0"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                        <Camera className="h-5 w-5" />
+                      </div>
                     )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white">{log.weight} kg</span>
+                        {log.waist_cm && (
+                          <span className="text-[11px] text-slate-400 font-mono">({log.waist_cm} cm cintura)</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{log.notes_cliente || 'Check-in registrado.'}</p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{log.notes_cliente || 'Check-in registrado.'}</p>
+                  <span className="text-xs text-slate-400 font-mono shrink-0 pl-2">{log.date}</span>
                 </div>
-              </div>
-              <span className="text-xs text-slate-400 font-mono shrink-0 pl-2">{log.date}</span>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
+        {/* Fin Columna Derecha */}
       </div>
+      {/* Fin Grid Responsivo */}
 
       {/* MODAL CHECK-IN SEMANAL (REQUERIMIENTO 3.2 DEL PLAN) */}
       {showCheckinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative text-left">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl relative text-left max-h-[90vh] overflow-y-auto scrollbar-thin">
             <h3 className="text-lg font-bold text-white mb-1">Check-in Semanal</h3>
             <p className="text-xs text-slate-400 mb-4">
               Envía tu peso en ayunas, medidas y foto de progreso a tu coach.
