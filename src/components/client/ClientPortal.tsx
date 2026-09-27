@@ -244,379 +244,438 @@ export const ClientPortal: React.FC = () => {
             <Calendar className="h-4 w-4 text-emerald-400" />
             Qué tengo que hacer hoy
           </h2>
-          <span className="text-xs bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full font-mono">
-            {assignment?.completed ? '100% Completado' : 'Pendiente'}
-          </span>
+          {assignment && (
+            <span className="text-xs bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full font-mono">
+              {assignment.completed ? '100% Completado' : 'Pendiente'}
+            </span>
+          )}
         </div>
 
-        {/* Tarjeta de Entrenamiento del Día */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${
-                assignment?.completed ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-300'
-              }`}>
-                <Dumbbell className="h-5 w-5" />
+        {/* Tarjeta de Entrenamiento del Día o Estado Vacío */}
+        {assignment && assignment.workout ? (
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${
+                  assignment.completed ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-300'
+                }`}>
+                  <Dumbbell className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">Entrenamiento Asignado</span>
+                  <h3 className="font-bold text-white text-base">
+                    {assignment.workout.title}
+                  </h3>
+                </div>
               </div>
-              <div>
-                <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">Entrenamiento Asignado</span>
-                <h3 className="font-bold text-white text-base">
-                  {assignment?.workout?.title || 'Fuerza & Hipertrofia (Push / Pull)'}
-                </h3>
-              </div>
+              {assignment.completed && (
+                <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold">
+                  <Check className="h-3.5 w-3.5" /> ¡Listo!
+                </span>
+              )}
             </div>
-            {assignment?.completed && (
-              <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold">
-                <Check className="h-3.5 w-3.5" /> ¡Listo!
-              </span>
+
+            {assignment.workout.description && (
+              <p className="text-xs text-slate-400">
+                {assignment.workout.description}
+              </p>
             )}
-          </div>
 
-          <p className="text-xs text-slate-400">
-            {assignment?.workout?.description || 'Rutina para ganancia de fuerza muscular y resistencia.'}
-          </p>
-
-          {/* Lista de Ejercicios Interactiva */}
-          <div className="space-y-2 pt-2 border-t border-slate-800/80">
-            {(assignment?.workout?.exercises || [
-              { id: 'ex-1', exercise_name: 'Press de Banca Plano', sets: 4, reps: '8-10', rest_seconds: 90, day_name: 'Día 1' },
-              { id: 'ex-2', exercise_name: 'Press Militar Mancuernas', sets: 3, reps: '10-12', rest_seconds: 75, day_name: 'Día 1' },
-              { id: 'ex-3', exercise_name: 'Fondos en Paralelas', sets: 3, reps: '12-15', rest_seconds: 60, day_name: 'Día 1' },
-            ]).map(ex => {
-              const isChecked = Boolean(completedExercises[ex.id]);
-              return (
-                <button
-                  key={ex.id}
-                  onClick={() => handleToggleExercise(ex.id)}
-                  className={`w-full text-left p-3 rounded-xl border flex items-center justify-between transition-all ${
-                    isChecked
-                      ? 'bg-emerald-500/10 border-emerald-500/40 text-slate-300'
-                      : 'bg-slate-950/70 border-slate-800/80 text-white hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`h-6 w-6 rounded-lg border flex items-center justify-center transition-colors ${
-                      isChecked
-                        ? 'bg-emerald-500 border-emerald-500 text-slate-950 font-bold'
-                        : 'border-slate-700 bg-slate-900'
-                    }`}>
-                      {isChecked && <Check className="h-4 w-4" />}
-                    </div>
-                    <div>
-                      <span className={`text-xs font-semibold ${isChecked ? 'line-through text-slate-400' : 'text-slate-100'}`}>
-                        {ex.exercise_name}
-                      </span>
-                      <span className="block text-[11px] text-slate-500">
-                        {ex.sets} series × {ex.reps} {ex.rest_seconds ? `(${ex.rest_seconds}s descanso)` : ''}
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-slate-600" />
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={handleFinishWorkout}
-            className={`w-full py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-              assignment?.completed
-                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-lg shadow-emerald-500/20'
-            }`}
-          >
-            {assignment?.completed ? (
-              <>
-                <Award className="h-4 w-4 text-emerald-400" />
-                <span>Entrenamiento Marcado como Completado (Desmarcar)</span>
-              </>
+            {/* Lista de Ejercicios Interactiva */}
+            {assignment.workout.exercises && assignment.workout.exercises.length > 0 ? (
+              <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                {assignment.workout.exercises.map(ex => {
+                  const isChecked = Boolean(completedExercises[ex.id]);
+                  return (
+                    <button
+                      key={ex.id}
+                      onClick={() => handleToggleExercise(ex.id)}
+                      className={`w-full text-left p-3 rounded-xl border flex items-center justify-between transition-all ${
+                        isChecked
+                          ? 'bg-emerald-500/10 border-emerald-500/40 text-slate-300'
+                          : 'bg-slate-950/70 border-slate-800/80 text-white hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`h-6 w-6 rounded-lg border flex items-center justify-center transition-colors ${
+                          isChecked
+                            ? 'bg-emerald-500 border-emerald-500 text-slate-950 font-bold'
+                            : 'border-slate-700 bg-slate-900'
+                        }`}>
+                          {isChecked && <Check className="h-4 w-4" />}
+                        </div>
+                        <div>
+                          <span className={`text-xs font-semibold ${isChecked ? 'line-through text-slate-400' : 'text-slate-100'}`}>
+                            {ex.exercise_name}
+                          </span>
+                          <span className="block text-[11px] text-slate-500">
+                            {ex.sets} series × {ex.reps} {ex.rest_seconds ? `(${ex.rest_seconds}s descanso)` : ''}
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-slate-600" />
+                    </button>
+                  );
+                })}
+              </div>
             ) : (
-              <>
-                <CheckCircle className="h-4 w-4" />
-                <span>Completar Entrenamiento de Hoy</span>
-              </>
+              <p className="text-xs text-slate-500 italic py-2">Esta rutina aún no tiene ejercicios detallados.</p>
             )}
-          </button>
-        </div>
+
+            <button
+              onClick={handleFinishWorkout}
+              className={`w-full py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                assignment.completed
+                  ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-lg shadow-emerald-500/20'
+              }`}
+            >
+              {assignment.completed ? (
+                <>
+                  <Award className="h-4 w-4 text-emerald-400" />
+                  <span>Entrenamiento Marcado como Completado (Desmarcar)</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Completar Entrenamiento de Hoy</span>
+                </>
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-7 shadow-lg text-center space-y-3">
+            <div className="h-12 w-12 rounded-2xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-500 mx-auto">
+              <Dumbbell className="h-6 w-6 text-slate-400" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-white text-base">Sin entrenamiento asignado para hoy</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                No tienes ninguna rutina programada para el día de hoy. Cuando tu entrenador te asigne un entrenamiento, aparecerán aquí tus ejercicios, series y repeticiones.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-950 border border-slate-800 text-[11px] text-slate-400">
+              <Clock className="h-3 w-3 text-emerald-400" />
+              <span>Día de descanso o pendiente de asignación</span>
+            </div>
+          </div>
+        )}
+      </div>
 
         {/* SECCIÓN 2: REGISTRO DE NUTRICIÓN DIARIO (REQUERIMIENTO 3.2 DEL PLAN) */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
-                <Apple className="h-5 w-5" />
+        {nutrition ? (
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+                  <Apple className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm">Metas de Nutrición de Hoy</h3>
+                  <p className="text-xs text-slate-400">Meta: {nutrition.calories} kcal</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-white text-sm">Metas de Nutrición de Hoy</h3>
-                <p className="text-xs text-slate-400">Meta: {nutrition?.calories || 2200} kcal</p>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              <button
-                type="button"
-                disabled={isExportingPDF}
-                onClick={handleExportPDF}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Descargar directamente la dieta y metas en PDF"
-              >
-                {isExportingPDF ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
-                    <span>Descargando...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-3.5 w-3.5" />
-                    <span>Descargar PDF</span>
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <button
+                  type="button"
+                  disabled={isExportingPDF}
+                  onClick={handleExportPDF}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Descargar directamente la dieta y metas en PDF"
+                >
+                  {isExportingPDF ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
+                      <span>Descargando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Descargar PDF</span>
+                    </>
+                  )}
+                </button>
 
-              <div className="flex gap-1.5 font-mono text-[11px]">
-                <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  {nutrition?.protein_g || 160}g P
-                </span>
-                <span className="px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                  {nutrition?.carbs_g || 220}g C
-                </span>
-                <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  {nutrition?.fat_g || 65}g G
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {nutrition?.notes && (
-            <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-300">
-              <span className="font-semibold text-emerald-400">Pauta del coach:</span> {nutrition.notes}
-            </div>
-          )}
-
-          {/* PLAN DETALLADO DE COMIDAS DEL DÍA */}
-          {nutrition?.diet_days && nutrition.diet_days.length > 0 && (() => {
-            const currentDay = nutrition.diet_days[activeClientDayIndex] || nutrition.diet_days[0];
-            const completedCount = currentDay.meals?.filter(m => dailyLog.completed_meal_ids?.includes(m.id)).length || 0;
-            const totalCount = currentDay.meals?.length || 0;
-            const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-
-            return (
-              <div className="space-y-3 pt-2 border-t border-slate-800/80">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Utensils className="h-4 w-4 text-emerald-400" />
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">
-                      Tu Menú y Comidas
-                    </span>
-                  </div>
-                  <span className="text-[11px] font-mono font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    {completedCount} de {totalCount} comidas ({percent}%)
+                <div className="flex gap-1.5 font-mono text-[11px]">
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    {nutrition.protein_g}g P
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                    {nutrition.carbs_g}g C
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    {nutrition.fat_g}g G
                   </span>
                 </div>
+              </div>
+            </div>
 
-                {/* Selector de Días si hay más de 1 */}
-                {nutrition.diet_days.length > 1 && (
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-                    {nutrition.diet_days.map((d, dIdx) => (
-                      <button
-                        key={d.id || dIdx}
-                        type="button"
-                        onClick={() => setActiveClientDayIndex(dIdx)}
-                        className={`px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
-                          activeClientDayIndex === dIdx
-                            ? 'bg-emerald-500 text-slate-950 font-bold'
-                            : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white'
-                        }`}
-                      >
-                        {d.day_name}
-                      </button>
-                    ))}
+            {nutrition.notes && (
+              <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-300">
+                <span className="font-semibold text-emerald-400">Pauta del coach:</span> {nutrition.notes}
+              </div>
+            )}
+
+            {/* PLAN DETALLADO DE COMIDAS DEL DÍA */}
+            {nutrition.diet_days && nutrition.diet_days.length > 0 && (() => {
+              const currentDay = nutrition.diet_days[activeClientDayIndex] || nutrition.diet_days[0];
+              const completedCount = currentDay.meals?.filter(m => dailyLog.completed_meal_ids?.includes(m.id)).length || 0;
+              const totalCount = currentDay.meals?.length || 0;
+              const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+              return (
+                <div className="space-y-3 pt-2 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Utensils className="h-4 w-4 text-emerald-400" />
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">
+                        Tu Menú y Comidas
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-mono font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      {completedCount} de {totalCount} comidas ({percent}%)
+                    </span>
                   </div>
-                )}
 
-                {/* Barra de progreso de comidas */}
-                <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
-                  <div
-                    className="bg-emerald-500 h-full transition-all duration-300"
-                    style={{ width: `${percent}%` }}
-                  />
-                </div>
+                  {/* Selector de Días si hay más de 1 */}
+                  {nutrition.diet_days.length > 1 && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                      {nutrition.diet_days.map((d, dIdx) => (
+                        <button
+                          key={d.id || dIdx}
+                          type="button"
+                          onClick={() => setActiveClientDayIndex(dIdx)}
+                          className={`px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
+                            activeClientDayIndex === dIdx
+                              ? 'bg-emerald-500 text-slate-950 font-bold'
+                              : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white'
+                          }`}
+                        >
+                          {d.day_name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
-                {/* Lista de Comidas */}
-                <div className="space-y-2.5">
-                  {currentDay.meals?.map((m) => {
-                    const isMealDone = Boolean(dailyLog.completed_meal_ids?.includes(m.id));
-                    const mealKcal = m.foods?.reduce((sum, f) => sum + (Number(f.calories) || 0), 0) || 0;
-                    const mealProt = m.foods?.reduce((sum, f) => sum + (Number(f.protein_g) || 0), 0) || 0;
-                    const mealCarb = m.foods?.reduce((sum, f) => sum + (Number(f.carbs_g) || 0), 0) || 0;
-                    const mealFat = m.foods?.reduce((sum, f) => sum + (Number(f.fat_g) || 0), 0) || 0;
+                  {/* Barra de progreso de comidas */}
+                  <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                    <div
+                      className="bg-emerald-500 h-full transition-all duration-300"
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
 
-                    return (
-                      <div
-                        key={m.id}
-                        className={`rounded-xl border p-3 transition-all ${
-                          isMealDone
-                            ? 'bg-emerald-500/5 border-emerald-500/40'
-                            : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
-                        }`}
-                      >
-                        {/* Cabecera de la comida */}
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleMeal(m.id)}
-                              className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
-                                isMealDone
-                                  ? 'bg-emerald-500 border-emerald-500 text-slate-950 font-bold'
-                                  : 'border-slate-700 bg-slate-900 hover:border-emerald-500'
-                              }`}
-                              title={isMealDone ? 'Desmarcar comida' : 'Marcar como consumida'}
-                            >
-                              {isMealDone && <Check className="h-3.5 w-3.5" />}
-                            </button>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-xs font-bold ${isMealDone ? 'line-through text-slate-400' : 'text-slate-100'}`}>
-                                  {m.name || `Comida ${m.meal_number}`}
-                                </span>
-                                {m.time_suggested && (
-                                  <span className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
-                                    <Clock className="h-2.5 w-2.5" /> {m.time_suggested}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                  {/* Lista de Comidas */}
+                  <div className="space-y-2.5">
+                    {currentDay.meals?.map((m) => {
+                      const isMealDone = Boolean(dailyLog.completed_meal_ids?.includes(m.id));
+                      const mealKcal = m.foods?.reduce((sum, f) => sum + (Number(f.calories) || 0), 0) || 0;
+                      const mealProt = m.foods?.reduce((sum, f) => sum + (Number(f.protein_g) || 0), 0) || 0;
+                      const mealCarb = m.foods?.reduce((sum, f) => sum + (Number(f.carbs_g) || 0), 0) || 0;
+                      const mealFat = m.foods?.reduce((sum, f) => sum + (Number(f.fat_g) || 0), 0) || 0;
 
-                          <div className="flex items-center gap-1 font-mono text-[10px]">
-                            <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-200 border border-slate-800">
-                              {mealKcal} kcal
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                              {mealProt}g P
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                              {mealCarb}g C
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                              {mealFat}g G
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Alimentos de la comida */}
-                        {m.foods && m.foods.length > 0 ? (
-                          <div className="pl-7 space-y-1">
-                            {m.foods.map((food, fIdx) => (
-                              <div
-                                key={food.id || fIdx}
-                                className="flex items-center justify-between text-[11px] text-slate-300 py-0.5 border-t border-slate-900 first:border-none"
+                      return (
+                        <div
+                          key={m.id}
+                          className={`rounded-xl border p-3 transition-all ${
+                            isMealDone
+                              ? 'bg-emerald-500/5 border-emerald-500/40'
+                              : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
+                          }`}
+                        >
+                          {/* Cabecera de la comida */}
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleMeal(m.id)}
+                                className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                                  isMealDone
+                                    ? 'bg-emerald-500 border-emerald-500 text-slate-950 font-bold'
+                                    : 'border-slate-700 bg-slate-900 hover:border-emerald-500'
+                                }`}
+                                title={isMealDone ? 'Desmarcar comida' : 'Marcar como consumida'}
                               >
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-slate-500">•</span>
-                                  <span className={isMealDone ? 'line-through text-slate-500' : 'text-slate-200'}>
-                                    {food.name}
+                                {isMealDone && <Check className="h-3.5 w-3.5" />}
+                              </button>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xs font-bold ${isMealDone ? 'line-through text-slate-400' : 'text-slate-100'}`}>
+                                    {m.name || `Comida ${m.meal_number}`}
                                   </span>
-                                  {food.portion && (
-                                    <span className="text-[10px] text-slate-400 font-mono">
-                                      ({food.portion})
+                                  {m.time_suggested && (
+                                    <span className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
+                                      <Clock className="h-2.5 w-2.5" /> {m.time_suggested}
                                     </span>
                                   )}
                                 </div>
-                                <div className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
-                                  <span>{food.calories} kcal</span>
-                                  <span className="text-emerald-400 ml-1.5">{food.protein_g}P</span>
-                                  <span className="text-sky-400 ml-1">{food.carbs_g}C</span>
-                                  <span className="text-amber-400 ml-1">{food.fat_g}G</span>
-                                </div>
                               </div>
-                            ))}
+                            </div>
+
+                            <div className="flex items-center gap-1 font-mono text-[10px]">
+                              <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-200 border border-slate-800">
+                                {mealKcal} kcal
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                {mealProt}g P
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                                {mealCarb}g C
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                {mealFat}g G
+                              </span>
+                            </div>
                           </div>
-                        ) : (
-                          <p className="pl-7 text-[10px] text-slate-500 italic">
-                            Sin alimentos detallados para esta comida.
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })()}
 
-          {/* Checkboxes de Cumplimiento Diario (Requerimiento 3.2: Checkbox para confirmar si cumplió con la ingesta) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
-            <button
-              onClick={() => handleToggleDailyNut('calories_met')}
-              className={`p-3 rounded-xl border flex items-center justify-between text-left transition-all ${
-                dailyLog.calories_met
-                  ? 'bg-emerald-500/10 border-emerald-500/50'
-                  : 'bg-slate-950 border-slate-800 hover:border-slate-700'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className={`h-5 w-5 rounded-md border flex items-center justify-center ${
-                  dailyLog.calories_met ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'border-slate-700'
-                }`}>
-                  {dailyLog.calories_met && <Check className="h-3.5 w-3.5" />}
+                          {/* Alimentos de la comida */}
+                          {m.foods && m.foods.length > 0 ? (
+                            <div className="pl-7 space-y-1">
+                              {m.foods.map((food, fIdx) => (
+                                <div
+                                  key={food.id || fIdx}
+                                  className="flex items-center justify-between text-[11px] text-slate-300 py-0.5 border-t border-slate-900 first:border-none"
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-slate-500">•</span>
+                                    <span className={isMealDone ? 'line-through text-slate-500' : 'text-slate-200'}>
+                                      {food.name}
+                                    </span>
+                                    {food.portion && (
+                                      <span className="text-[10px] text-slate-400 font-mono">
+                                        ({food.portion})
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
+                                    <span>{food.calories} kcal</span>
+                                    <span className="text-emerald-400 ml-1.5">{food.protein_g}P</span>
+                                    <span className="text-sky-400 ml-1">{food.carbs_g}C</span>
+                                    <span className="text-amber-400 ml-1">{food.fat_g}G</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="pl-7 text-[10px] text-slate-500 italic">
+                              Sin alimentos detallados para esta comida.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div>
-                  <span className="text-xs font-semibold text-white block">Calorías Cumplidas</span>
-                  <span className="text-[10px] text-slate-400">Alcance de meta diaria</span>
-                </div>
-              </div>
-              <Flame className={`h-4 w-4 ${dailyLog.calories_met ? 'text-amber-400' : 'text-slate-600'}`} />
-            </button>
+              );
+            })()}
 
-            <button
-              onClick={() => handleToggleDailyNut('protein_met')}
-              className={`p-3 rounded-xl border flex items-center justify-between text-left transition-all ${
-                dailyLog.protein_met
-                  ? 'bg-emerald-500/10 border-emerald-500/50'
-                  : 'bg-slate-950 border-slate-800 hover:border-slate-700'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className={`h-5 w-5 rounded-md border flex items-center justify-center ${
-                  dailyLog.protein_met ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'border-slate-700'
-                }`}>
-                  {dailyLog.protein_met && <Check className="h-3.5 w-3.5" />}
-                </div>
-                <div>
-                  <span className="text-xs font-semibold text-white block">Proteína Cumplida</span>
-                  <span className="text-[10px] text-slate-400">Total en gramos del día</span>
-                </div>
-              </div>
-              <Apple className={`h-4 w-4 ${dailyLog.protein_met ? 'text-emerald-400' : 'text-slate-600'}`} />
-            </button>
-          </div>
-
-          {/* Registro de Agua */}
-          <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Droplets className="h-4 w-4 text-sky-400" />
-              <span className="text-xs text-slate-300">Hidratación diaria:</span>
-              <span className="text-xs font-bold text-sky-400 font-mono">{dailyLog.water_liters} Litros</span>
-            </div>
-            <div className="flex gap-1.5">
+            {/* Checkboxes de Cumplimiento Diario */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
               <button
-                onClick={() => handleAdjustWater(-0.5)}
-                className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs rounded text-slate-300"
+                onClick={() => handleToggleDailyNut('calories_met')}
+                className={`p-3 rounded-xl border flex items-center justify-between text-left transition-all ${
+                  dailyLog.calories_met
+                    ? 'bg-emerald-500/10 border-emerald-500/50'
+                    : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                }`}
               >
-                -0.5L
+                <div className="flex items-center gap-2.5">
+                  <div className={`h-5 w-5 rounded-md border flex items-center justify-center ${
+                    dailyLog.calories_met ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'border-slate-700'
+                  }`}>
+                    {dailyLog.calories_met && <Check className="h-3.5 w-3.5" />}
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-white block">Calorías Cumplidas</span>
+                    <span className="text-[10px] text-slate-400">Alcance de meta diaria</span>
+                  </div>
+                </div>
+                <Flame className={`h-4 w-4 ${dailyLog.calories_met ? 'text-amber-400' : 'text-slate-600'}`} />
               </button>
+
               <button
-                onClick={() => handleAdjustWater(0.5)}
-                className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs rounded text-slate-300"
+                onClick={() => handleToggleDailyNut('protein_met')}
+                className={`p-3 rounded-xl border flex items-center justify-between text-left transition-all ${
+                  dailyLog.protein_met
+                    ? 'bg-emerald-500/10 border-emerald-500/50'
+                    : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                }`}
               >
-                +0.5L
+                <div className="flex items-center gap-2.5">
+                  <div className={`h-5 w-5 rounded-md border flex items-center justify-center ${
+                    dailyLog.protein_met ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'border-slate-700'
+                  }`}>
+                    {dailyLog.protein_met && <Check className="h-3.5 w-3.5" />}
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-white block">Proteína Cumplida</span>
+                    <span className="text-[10px] text-slate-400">Total en gramos del día</span>
+                  </div>
+                </div>
+                <Apple className={`h-4 w-4 ${dailyLog.protein_met ? 'text-emerald-400' : 'text-slate-600'}`} />
               </button>
             </div>
+
+            {/* Registro de Agua */}
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Droplets className="h-4 w-4 text-sky-400" />
+                <span className="text-xs text-slate-300">Hidratación diaria:</span>
+                <span className="text-xs font-bold text-sky-400 font-mono">{dailyLog.water_liters} Litros</span>
+              </div>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => handleAdjustWater(-0.5)}
+                  className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs rounded text-slate-300"
+                >
+                  -0.5L
+                </button>
+                <button
+                  onClick={() => handleAdjustWater(0.5)}
+                  className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs rounded text-slate-300"
+                >
+                  +0.5L
+                </button>
+              </div>
+            </div>
           </div>
+        ) : (
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-7 shadow-lg text-center space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-500 mx-auto">
+              <Apple className="h-6 w-6 text-slate-400" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-white text-base">Sin metas nutricionales asignadas todavía</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                Tu entrenador aún no ha definido tus metas calóricas ni tus objetivos de macronutrientes. En cuanto configure tu plan, podrás consultar tus comidas y registrar tu ingesta diaria.
+              </p>
+            </div>
+
+            {/* Registro de Agua disponible aun sin plan nutricional */}
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between max-w-md mx-auto">
+              <div className="flex items-center gap-2">
+                <Droplets className="h-4 w-4 text-sky-400" />
+                <span className="text-xs text-slate-300">Hidratación diaria:</span>
+                <span className="text-xs font-bold text-sky-400 font-mono">{dailyLog.water_liters} Litros</span>
+              </div>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => handleAdjustWater(-0.5)}
+                  className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs rounded text-slate-300"
+                >
+                  -0.5L
+                </button>
+                <button
+                  onClick={() => handleAdjustWater(0.5)}
+                  className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs rounded text-slate-300"
+                >
+                  +0.5L
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
         {/* Fin Columna Izquierda */}
         </div>
 
@@ -628,33 +687,41 @@ export const ClientPortal: React.FC = () => {
             </h2>
 
             <div className="space-y-2.5">
-              {progressLogs.map(log => (
-                <div key={log.id} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {log.url_foto_frente ? (
-                      <img
-                        src={log.url_foto_frente}
-                        alt="Foto check-in"
-                        className="h-12 w-12 rounded-xl object-cover border border-slate-700 shrink-0"
-                      />
-                    ) : (
-                      <div className="h-12 w-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                        <Camera className="h-5 w-5" />
+              {progressLogs.length > 0 ? (
+                progressLogs.map(log => (
+                  <div key={log.id} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {log.url_foto_frente ? (
+                        <img
+                          src={log.url_foto_frente}
+                          alt="Foto check-in"
+                          className="h-12 w-12 rounded-xl object-cover border border-slate-700 shrink-0"
+                        />
+                      ) : (
+                        <div className="h-12 w-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                          <Camera className="h-5 w-5" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-white">{log.weight} kg</span>
+                          {log.waist_cm && (
+                            <span className="text-[11px] text-slate-400 font-mono">({log.waist_cm} cm cintura)</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{log.notes_cliente || 'Check-in registrado.'}</p>
                       </div>
-                    )}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-white">{log.weight} kg</span>
-                        {log.waist_cm && (
-                          <span className="text-[11px] text-slate-400 font-mono">({log.waist_cm} cm cintura)</span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{log.notes_cliente || 'Check-in registrado.'}</p>
                     </div>
+                    <span className="text-xs text-slate-400 font-mono shrink-0 pl-2">{log.date}</span>
                   </div>
-                  <span className="text-xs text-slate-400 font-mono shrink-0 pl-2">{log.date}</span>
+                ))
+              ) : (
+                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
+                  <Camera className="h-6 w-6 text-slate-500 mx-auto" />
+                  <p className="text-xs text-slate-400">Aún no has registrado ningún check-in semanal.</p>
+                  <p className="text-[11px] text-slate-500">Toca el botón superior para registrar tu primer peso y foto.</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
