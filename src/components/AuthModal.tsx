@@ -68,7 +68,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             {isLogin ? 'Iniciar Sesión en FitSync' : 'Crear Cuenta'}
           </h3>
           <p className="text-xs text-slate-400 mt-1">
-            Conectado a Supabase: <span className="text-emerald-400 font-mono">webrizefhxccighruoem</span>
+            Plataforma de Entrenamiento & Nutrición
           </p>
         </div>
 

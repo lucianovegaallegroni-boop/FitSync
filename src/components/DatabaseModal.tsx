@@ -50,7 +50,7 @@ export const DatabaseModal: React.FC<DatabaseModalProps> = ({ isOpen, onClose })
           </div>
           <div>
             <h3 className="text-lg font-bold text-white">Conexión Supabase Backend</h3>
-            <p className="text-xs text-slate-400 font-mono">webrizefhxccighruoem.supabase.co</p>
+            <p className="text-xs text-slate-400 font-mono">Configurado vía variables de entorno (.env)</p>
           </div>
         </div>
 
@@ -65,7 +65,7 @@ export const DatabaseModal: React.FC<DatabaseModalProps> = ({ isOpen, onClose })
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-400 font-medium">Project Ref:</span>
-              <span className="font-mono text-slate-200">webrizefhxccighruoem</span>
+              <span className="font-mono text-slate-200">Supabase Cloud Project</span>
             </div>
           </div>
 
@@ -95,7 +95,7 @@ export const DatabaseModal: React.FC<DatabaseModalProps> = ({ isOpen, onClose })
 
           <div className="flex justify-end gap-3 pt-2">
             <a
-              href="https://supabase.com/dashboard/project/webrizefhxccighruoem/sql/new"
+              href="https://supabase.com/dashboard"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold px-4 py-2 rounded-xl text-xs transition-colors"

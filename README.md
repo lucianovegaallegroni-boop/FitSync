@@ -14,10 +14,10 @@ FitSync es una aplicación web y móvil diseñada para que los entrenadores pers
 
 ## ⚡ Conexión Supabase
 
-El proyecto está configurado con tu instancia de Supabase en `.env`:
+El proyecto se configura mediante variables de entorno en `.env`:
 ```env
-VITE_SUPABASE_URL=https://webrizefhxccighruoem.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_Z6Y7V8oySXifjZTVGzd7Hw_pc64ML_u
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-or-publishable-key
 ```
 
 ### 🗄️ Esquema de Base de Datos y Tablas
@@ -32,7 +32,7 @@ El archivo [`supabase/schema.sql`](supabase/schema.sql) contiene la definición 
 8. Políticas de seguridad **Row Level Security (RLS)** y bucket de storage `progress-photos`.
 
 > **Para aplicar la base de datos remota:**
-> Abre tu [Supabase Dashboard > SQL Editor](https://supabase.com/dashboard/project/webrizefhxccighruoem/sql/new) y pega el contenido de `supabase/schema.sql`.
+> Abre tu [Supabase Dashboard > SQL Editor](https://supabase.com/dashboard) y pega el contenido de `supabase/schema.sql`.
 
 ---
 
