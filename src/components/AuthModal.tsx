@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, Mail, User, Dumbbell, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Lock, Mail, User, Dumbbell, AlertCircle, CheckCircle2, ShieldCheck, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/database';
 
@@ -9,7 +9,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { login, signup } = useAuth();
+  const { login, signup, switchDemoRole } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -179,6 +179,44 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           >
             {isLogin ? '¿No tienes cuenta? Regístrate aquí' : '¿Ya tienes cuenta? Inicia sesión'}
           </button>
+        </div>
+
+        {/* Espacio con las Sesiones de Demo (Debajo del formulario de login) */}
+        <div className="mt-5 pt-4 border-t border-slate-800">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Sesiones de Demostración
+            </span>
+            <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-medium">
+              1-clic
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => { switchDemoRole('trainer'); onClose(); }}
+              className="p-2 bg-slate-950/70 hover:bg-emerald-500/10 border border-slate-800 hover:border-emerald-500/40 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-1 group"
+            >
+              <ShieldCheck className="h-4 w-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span className="text-[11px] font-medium text-slate-200 group-hover:text-emerald-300">Coach</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { switchDemoRole('client'); onClose(); }}
+              className="p-2 bg-slate-950/70 hover:bg-teal-500/10 border border-slate-800 hover:border-teal-500/40 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-1 group"
+            >
+              <User className="h-4 w-4 text-teal-400 group-hover:scale-110 transition-transform" />
+              <span className="text-[11px] font-medium text-slate-200 group-hover:text-teal-300">Cliente</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { switchDemoRole('admin'); onClose(); }}
+              className="p-2 bg-slate-950/70 hover:bg-purple-500/10 border border-slate-800 hover:border-purple-500/40 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-1 group"
+            >
+              <Shield className="h-4 w-4 text-purple-400 group-hover:scale-110 transition-transform" />
+              <span className="text-[11px] font-medium text-slate-200 group-hover:text-purple-300">Admin</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

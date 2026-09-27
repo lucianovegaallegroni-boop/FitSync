@@ -12,13 +12,14 @@ import {
   Camera,
   Activity,
   Clock,
-  Sparkles
+  Sparkles,
+  Shield
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/database';
 
 export const LandingPage: React.FC = () => {
-  const { login, signup } = useAuth();
+  const { login, signup, switchDemoRole } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -281,6 +282,67 @@ export const LandingPage: React.FC = () => {
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 </form>
+              </div>
+
+              {/* Espacio con las Sesiones de Demo (Debajo del cuadro de login) */}
+              <div className="mt-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl backdrop-blur-md">
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      Sesiones de Demostración
+                    </span>
+                  </div>
+                  <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">
+                    Acceso 1-clic
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mb-3.5">
+                  Explora las funcionalidades completas de FitSync sin necesidad de registro previo:
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => switchDemoRole('trainer')}
+                    className="group p-2.5 bg-slate-950/80 hover:bg-emerald-500/10 border border-slate-800 hover:border-emerald-500/40 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-1.5"
+                  >
+                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 group-hover:scale-110 flex items-center justify-center text-emerald-400 transition-transform">
+                      <ShieldCheck className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-white group-hover:text-emerald-300 transition-colors">Coach</p>
+                      <p className="text-[10px] text-slate-500">Entrenador</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => switchDemoRole('client')}
+                    className="group p-2.5 bg-slate-950/80 hover:bg-teal-500/10 border border-slate-800 hover:border-teal-500/40 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-1.5"
+                  >
+                    <div className="h-8 w-8 rounded-lg bg-teal-500/10 border border-teal-500/20 group-hover:scale-110 flex items-center justify-center text-teal-400 transition-transform">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-white group-hover:text-teal-300 transition-colors">Cliente</p>
+                      <p className="text-[10px] text-slate-500">Atleta</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => switchDemoRole('admin')}
+                    className="group p-2.5 bg-slate-950/80 hover:bg-purple-500/10 border border-slate-800 hover:border-purple-500/40 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-1.5"
+                  >
+                    <div className="h-8 w-8 rounded-lg bg-purple-500/10 border border-purple-500/20 group-hover:scale-110 flex items-center justify-center text-purple-400 transition-transform">
+                      <Shield className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-white group-hover:text-purple-300 transition-colors">Admin</p>
+                      <p className="text-[10px] text-slate-500">Super Panel</p>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
