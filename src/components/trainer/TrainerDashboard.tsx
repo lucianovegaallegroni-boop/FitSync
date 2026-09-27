@@ -227,7 +227,10 @@ export const TrainerDashboard: React.FC = () => {
       setMealsPerDay(count);
       if (nut.diet_days && nut.diet_days.length > 0) {
         setDietDays(nut.diet_days);
+        const firstDayMeals = nut.diet_days[0]?.meals?.length || count;
+        setMealsPerDay(firstDayMeals);
       } else {
+        setMealsPerDay(count);
         setDietDays([
           {
             id: `day-${Date.now()}`,
@@ -483,6 +486,16 @@ export const TrainerDashboard: React.FC = () => {
   };
 
   const currentDietDay = dietDays[activeDayIndex] || dietDays[0];
+
+  // Sincronizar el selector de comidas por día con la cantidad de comidas que tiene el día o plan activo
+  useEffect(() => {
+    if (currentDietDay?.meals) {
+      const count = currentDietDay.meals.length;
+      if (count > 0 && count !== mealsPerDay) {
+        setMealsPerDay(count);
+      }
+    }
+  }, [activeDayIndex, currentDietDay?.id, currentDietDay?.meals?.length]);
 
   const calculatedDayTotals = useMemo(() => {
     if (!currentDietDay) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
@@ -1439,20 +1452,26 @@ export const TrainerDashboard: React.FC = () => {
                   Cantidad de Comidas por Día
                 </label>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {[2, 3, 4, 5, 6].map(count => (
-                    <button
-                      key={count}
-                      type="button"
-                      onClick={() => handleChangeMealsPerDay(count)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                        mealsPerDay === count
-                          ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                          : 'bg-slate-950 text-slate-300 border border-slate-800 hover:border-slate-700'
-                      }`}
-                    >
-                      {count} {count === 1 ? 'comida' : 'comidas'}
-                    </button>
-                  ))}
+                  {Array.from(new Set([2, 3, 4, 5, 6, currentDietDay?.meals?.length || mealsPerDay]))
+                    .filter(n => typeof n === 'number' && n > 0)
+                    .sort((a, b) => a - b)
+                    .map(count => {
+                      const isSelected = (currentDietDay?.meals?.length ?? mealsPerDay) === count;
+                      return (
+                        <button
+                          key={count}
+                          type="button"
+                          onClick={() => handleChangeMealsPerDay(count)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            isSelected
+                              ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                              : 'bg-slate-950 text-slate-300 border border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          {count} {count === 1 ? 'comida' : 'comidas'}
+                        </button>
+                      );
+                    })}
                 </div>
               </div>
 
@@ -1494,7 +1513,12 @@ export const TrainerDashboard: React.FC = () => {
                 <button
                   key={d.id || idx}
                   type="button"
-                  onClick={() => setActiveDayIndex(idx)}
+                  onClick={() => {
+                    setActiveDayIndex(idx);
+                    if (d.meals && d.meals.length > 0) {
+                      setMealsPerDay(d.meals.length);
+                    }
+                  }}
                   className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
                     activeDayIndex === idx
                       ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/10'
