@@ -309,6 +309,10 @@ export const TrainerDashboard: React.FC = () => {
     ]);
   };
 
+  const handleRemoveExerciseRow = (index: number) => {
+    setExercisesList(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleCreateWorkout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || isCreatingWorkout) return;
@@ -2249,69 +2253,96 @@ export const TrainerDashboard: React.FC = () => {
                   </button>
                 </div>
 
-                {exercisesList.map((ex, idx) => (
-                  <div key={idx} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
-                    <div className="sm:col-span-3">
-                      <label className="text-[10px] text-slate-400 block sm:hidden mb-1 font-medium">Día o Fase</label>
-                      <input
-                        type="text"
-                        placeholder="Ej. Día 1"
-                        value={ex.day_name}
-                        onChange={(e) => {
-                          const updated = [...exercisesList];
-                          updated[idx].day_name = e.target.value;
-                          setExercisesList(updated);
-                        }}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200"
-                      />
-                    </div>
-                    <div className="sm:col-span-5">
-                      <label className="text-[10px] text-slate-400 block sm:hidden mb-1 font-medium">Ejercicio</label>
-                      <input
-                        type="text"
-                        placeholder="Nombre ejercicio"
-                        required
-                        value={ex.exercise_name}
-                        onChange={(e) => {
-                          const updated = [...exercisesList];
-                          updated[idx].exercise_name = e.target.value;
-                          setExercisesList(updated);
-                        }}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 sm:col-span-4">
-                      <div>
-                        <label className="text-[10px] text-slate-400 block sm:hidden mb-1 font-medium">Series</label>
-                        <input
-                          type="number"
-                          placeholder="Series"
-                          value={ex.sets}
-                          onChange={(e) => {
-                            const updated = [...exercisesList];
-                            updated[idx].sets = Number(e.target.value);
-                            setExercisesList(updated);
-                          }}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 text-center"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-slate-400 block sm:hidden mb-1 font-medium">Reps</label>
+                {exercisesList.length > 0 && (
+                  <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <span className="sm:col-span-3">Día o Fase</span>
+                    <span className="sm:col-span-4">Ejercicio</span>
+                    <span className="sm:col-span-2 text-center">Series</span>
+                    <span className="sm:col-span-2 text-center">Reps</span>
+                    <span className="sm:col-span-1 text-center">Acción</span>
+                  </div>
+                )}
+
+                {exercisesList.length === 0 ? (
+                  <div className="p-4 text-center bg-slate-950/60 rounded-xl border border-dashed border-slate-800 text-xs text-slate-500">
+                    No hay ejercicios agregados a esta rutina. Haz clic en "Agregar Ejercicio" para incluir uno.
+                  </div>
+                ) : (
+                  exercisesList.map((ex, idx) => (
+                    <div key={idx} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 items-center">
+                      <div className="w-full sm:col-span-3">
+                        <label className="text-[10px] text-slate-400 block sm:hidden mb-1 font-medium">Día o Fase</label>
                         <input
                           type="text"
-                          placeholder="Reps"
-                          value={ex.reps}
+                          placeholder="Ej. Día 1"
+                          value={ex.day_name}
                           onChange={(e) => {
                             const updated = [...exercisesList];
-                            updated[idx].reps = e.target.value;
+                            updated[idx].day_name = e.target.value;
                             setExercisesList(updated);
                           }}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 text-center"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200"
                         />
                       </div>
+                      <div className="w-full sm:col-span-4">
+                        <label className="text-[10px] text-slate-400 block sm:hidden mb-1 font-medium">Ejercicio</label>
+                        <input
+                          type="text"
+                          placeholder="Nombre ejercicio"
+                          required
+                          value={ex.exercise_name}
+                          onChange={(e) => {
+                            const updated = [...exercisesList];
+                            updated[idx].exercise_name = e.target.value;
+                            setExercisesList(updated);
+                          }}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200"
+                        />
+                      </div>
+                      <div className="w-full grid grid-cols-2 gap-2 sm:col-span-4">
+                        <div>
+                          <label className="text-[10px] text-slate-400 block sm:hidden mb-1 font-medium">Series</label>
+                          <input
+                            type="number"
+                            placeholder="Series"
+                            value={ex.sets}
+                            onChange={(e) => {
+                              const updated = [...exercisesList];
+                              updated[idx].sets = Number(e.target.value);
+                              setExercisesList(updated);
+                            }}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 text-center"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 block sm:hidden mb-1 font-medium">Reps</label>
+                          <input
+                            type="text"
+                            placeholder="Reps"
+                            value={ex.reps}
+                            onChange={(e) => {
+                              const updated = [...exercisesList];
+                              updated[idx].reps = e.target.value;
+                              setExercisesList(updated);
+                            }}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 text-center"
+                          />
+                        </div>
+                      </div>
+                      <div className="w-full sm:col-span-1 flex items-center justify-end sm:justify-center pt-1 sm:pt-0">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveExerciseRow(idx)}
+                          className="text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 p-2 rounded-lg transition-colors flex items-center gap-1.5"
+                          title="Eliminar este ejercicio"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sm:hidden text-rose-400 text-xs font-medium">Eliminar</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
