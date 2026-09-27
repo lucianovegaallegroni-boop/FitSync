@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, Mail, User, ShieldCheck, Shield, Dumbbell, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Lock, Mail, User, Dumbbell, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/database';
 
@@ -9,7 +9,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { login, signup, switchDemoRole } = useAuth();
+  const { login, signup } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,19 +35,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       } else {
         const { error } = await signup(email, password, fullName, role);
         if (error) throw error;
-        setSuccessMsg('¡Cuenta creada con éxito! Revisa tu email si requiere confirmación.');
-        setTimeout(() => onClose(), 1500);
+        setSuccessMsg('¡Cuenta registrada! Tu acceso está pendiente de activación por un administrador antes de ingresar.');
+        setTimeout(() => {
+          setIsLogin(true);
+          setSuccessMsg('');
+        }, 3500);
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error en la autenticación');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoLogin = (roleToSelect: UserRole) => {
-    switchDemoRole(roleToSelect);
-    onClose();
   };
 
   return (
@@ -85,39 +83,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <span>{successMsg}</span>
           </div>
         )}
-
-        {/* Demo Fast Access Buttons */}
-        <div className="mb-6 p-3 bg-slate-950/60 rounded-xl border border-slate-800/80">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-2 text-center">
-            Prueba rápida sin registro
-          </span>
-          <div className="grid grid-cols-3 gap-1.5">
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('trainer')}
-              className="py-2 px-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded-lg font-medium flex flex-col items-center justify-center gap-1 transition-colors border border-slate-700"
-            >
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Coach</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('client')}
-              className="py-2 px-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded-lg font-medium flex flex-col items-center justify-center gap-1 transition-colors border border-slate-700"
-            >
-              <User className="h-3.5 w-3.5 text-teal-400" />
-              <span>Cliente</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('admin')}
-              className="py-2 px-1.5 bg-purple-950/40 hover:bg-purple-900/50 text-xs text-purple-300 rounded-lg font-medium flex flex-col items-center justify-center gap-1 transition-colors border border-purple-500/30"
-            >
-              <Shield className="h-3.5 w-3.5 text-purple-400" />
-              <span>Admin</span>
-            </button>
-          </div>
-        </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
           {!isLogin && (

@@ -135,19 +135,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, pass: string) => {
     setLoading(true);
+    const emailNorm = email.trim().toLowerCase();
 
-    // 1. Verificar si la cuenta está desactivada
-    const status = await dataService.checkUserStatus(email);
+    // 1. Verificar si la cuenta está desactivada o pendiente de activación
+    const status = await dataService.checkUserStatus(emailNorm);
     if (status && status.allowed === false) {
       setLoading(false);
-      const reasonMsg = status.reason ? ` Motivo: "${status.reason}".` : '';
+      const isPending = status.reason && status.reason.toLowerCase().includes('pendiente');
+      const reasonMsg = isPending
+        ? 'Tu cuenta ha sido creada exitosamente pero requiere ser aprobada y activada por un administrador antes de ingresar.'
+        : `Tu cuenta ha sido desactivada por un administrador.${status.reason ? ` Motivo: "${status.reason}".` : ''}`;
       return {
-        error: new Error(`Tu cuenta ha sido desactivada por un administrador.${reasonMsg} Por favor ponte en contacto con soporte.`)
+        error: new Error(reasonMsg)
       };
     }
 
-    // 2. Si es cuenta demo de admin
-    if (email.toLowerCase() === 'admin@fitsync.com') {
+    // 2. Si las credenciales fueron generadas para el cliente o coinciden en el almacén seguro
+    if (dataService.verifyCredentials(emailNorm, pass)) {
+      const allUsers = await dataService.getAllUsers();
+      const matchedProfile = allUsers.find(u => u.email.toLowerCase() === emailNorm);
+      if (matchedProfile) {
+        if (matchedProfile.is_active === false) {
+          setLoading(false);
+          return {
+            error: new Error('Esta cuenta se encuentra pendiente de activación o desactivada por un administrador.')
+          };
+        }
+        setIsDemoMode(true);
+        setUser({ id: matchedProfile.id, email: matchedProfile.email });
+        setProfile(matchedProfile);
+        await dataService.recordLogin(matchedProfile.id, matchedProfile.email, matchedProfile.role);
+        setLoading(false);
+        return { error: null };
+      }
+    }
+
+    // 3. Si es cuenta admin
+    if (emailNorm === 'admin@fitsync.com') {
       setIsDemoMode(true);
       setUser({ id: 'admin-1', email: 'admin@fitsync.com' });
       setProfile(DEMO_ADMIN_PROFILE);
@@ -156,9 +180,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error: null };
     }
 
-    // 3. Supabase Auth
+    // 4. Supabase Auth estándar
     const { data: authData, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: emailNorm,
       password: pass,
     });
 
@@ -179,9 +203,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setProfile(null);
         setLoading(false);
-        const reasonMsg = userProfile.deactivation_reason ? ` Motivo: "${userProfile.deactivation_reason}".` : '';
+        const isPending = userProfile.deactivation_reason && userProfile.deactivation_reason.toLowerCase().includes('pendiente');
+        const reasonMsg = isPending
+          ? 'Tu cuenta ha sido registrada pero requiere ser activada por un administrador antes de ingresar.'
+          : `Tu cuenta ha sido desactivada por un administrador.${userProfile.deactivation_reason ? ` Motivo: "${userProfile.deactivation_reason}".` : ''}`;
         return {
-          error: new Error(`Tu cuenta ha sido desactivada por un administrador.${reasonMsg}`)
+          error: new Error(reasonMsg)
         };
       }
 
@@ -198,8 +225,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = async (email: string, pass: string, fullName: string, role: UserRole) => {
     setLoading(true);
+    const emailNorm = email.trim().toLowerCase();
+
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: emailNorm,
       password: pass,
       options: {
         data: {
@@ -209,23 +238,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
     });
 
-    if (!error && data.user) {
-      setIsDemoMode(false);
-      try {
-        await supabase.from('profiles').insert([{
-          id: data.user.id,
-          email,
-          full_name: fullName,
-          role,
-          is_active: true,
-        }]);
-      } catch {
-        // Ignorar si el trigger ya lo insertó
-      }
+    if (error) {
+      setLoading(false);
+      return { error };
     }
 
+    // El nuevo usuario queda registrado como INACTIVO (pendiente de activación por el admin)
+    const newProfile: Profile = {
+      id: data?.user?.id || `user-${Date.now()}`,
+      email: emailNorm,
+      full_name: fullName.trim(),
+      role,
+      is_active: false,
+      deactivation_reason: 'Cuenta pendiente de activación por un administrador',
+      created_at: new Date().toISOString(),
+      last_login_at: null,
+    };
+
+    try {
+      await supabase.from('profiles').upsert([newProfile], { onConflict: 'id' });
+    } catch {
+      // Ignorar si el trigger ya lo insertó
+    }
+
+    // Registrar en almacén de datos
+    dataService.registerPendingUser(newProfile, pass);
+
+    // Cerrar sesión inmediata para impedir ingreso sin aprobación del admin
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+    setIsDemoMode(false);
     setLoading(false);
-    return { error };
+
+    return {
+      error: null,
+    };
   };
 
   const logout = async () => {

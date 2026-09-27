@@ -12,14 +12,13 @@ import {
   Camera,
   Activity,
   Clock,
-  Sparkles,
-  Shield
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/database';
 
 export const LandingPage: React.FC = () => {
-  const { login, signup, switchDemoRole } = useAuth();
+  const { login, signup } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,7 +41,11 @@ export const LandingPage: React.FC = () => {
       } else {
         const { error } = await signup(email, password, fullName, role);
         if (error) throw error;
-        setSuccessMsg('¡Cuenta creada con éxito! Iniciando sesión...');
+        setSuccessMsg('¡Cuenta registrada! Tu cuenta ha sido creada y se encuentra pendiente de activación por un administrador para poder ingresar.');
+        setTimeout(() => {
+          setIsLogin(true);
+          setSuccessMsg('');
+        }, 4000);
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al autenticar con el servidor');
@@ -71,26 +74,9 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => switchDemoRole('admin')}
-              className="text-xs bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 px-3 py-1.5 rounded-xl font-medium transition-colors hidden sm:flex items-center gap-1.5"
-            >
-              <Shield className="h-3.5 w-3.5 text-purple-400" />
-              <span>Demo Admin</span>
-            </button>
-            <button
-              onClick={() => switchDemoRole('trainer')}
-              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl font-medium transition-colors hidden sm:flex items-center gap-1.5"
-            >
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Demo Entrenador</span>
-            </button>
-            <button
-              onClick={() => switchDemoRole('client')}
-              className="text-xs bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-3 py-1.5 rounded-xl transition-colors shadow-lg shadow-emerald-500/20"
-            >
-              <span>Demo Cliente</span>
-            </button>
+            <span className="text-xs text-slate-400 font-medium px-3 py-1.5 rounded-xl bg-slate-800/60 border border-slate-700/80">
+              Acceso Seguro
+            </span>
           </div>
         </div>
       </header>
@@ -191,45 +177,6 @@ export const LandingPage: React.FC = () => {
                   >
                     Crear Cuenta
                   </button>
-                </div>
-
-                {/* Instant Demo Access (Very convenient) */}
-                <div className="mb-5 p-3 bg-slate-950/80 rounded-2xl border border-slate-800/80">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2 text-center">
-                    Acceso Instantáneo de Demostración
-                  </span>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => switchDemoRole('trainer')}
-                      className="py-2 px-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-[11px] font-medium text-slate-200 flex flex-col items-center justify-center gap-1 transition-colors"
-                    >
-                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                      <span>Coach</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => switchDemoRole('client')}
-                      className="py-2 px-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-[11px] font-medium text-slate-200 flex flex-col items-center justify-center gap-1 transition-colors"
-                    >
-                      <User className="h-3.5 w-3.5 text-teal-400" />
-                      <span>Cliente</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => switchDemoRole('admin')}
-                      className="py-2 px-1.5 bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/30 rounded-xl text-[11px] font-medium text-purple-300 flex flex-col items-center justify-center gap-1 transition-colors"
-                    >
-                      <Shield className="h-3.5 w-3.5 text-purple-400" />
-                      <span>Admin</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="relative flex py-2 items-center">
-                  <div className="flex-grow border-t border-slate-800"></div>
-                  <span className="flex-shrink mx-3 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">O con tu correo</span>
-                  <div className="flex-grow border-t border-slate-800"></div>
                 </div>
 
                 {errorMsg && (

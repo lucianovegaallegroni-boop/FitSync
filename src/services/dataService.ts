@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import {
   Profile,
@@ -9,6 +10,52 @@ import {
   DailyNutritionLog,
   MonthlyLoginStat,
 } from '../types/database';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+// Cliente aislado para registrar clientes sin alterar la sesión activa del entrenador
+const standaloneAuth = (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('https://'))
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+    })
+  : null;
+
+export function generateRandomPassword(): string {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const numbers = '23456789';
+  let code = '';
+  for (let i = 0; i < 4; i++) {
+    code += letters.charAt(Math.floor(Math.random() * letters.length));
+  }
+  for (let i = 0; i < 4; i++) {
+    code += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  }
+  return `FitSync-${code}`;
+}
+
+function getStoredCredentials(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem('fitsync_credentials_store');
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // noop
+  }
+  return {
+    'carlos.m@example.com': 'FitSync-1234',
+    'sofia.r@example.com': 'FitSync-5678',
+    'admin@fitsync.com': 'admin123',
+    'entrenador@fitsync.com': 'coach123',
+  };
+}
+
+function saveCredentials(map: Record<string, string>) {
+  try {
+    localStorage.setItem('fitsync_credentials_store', JSON.stringify(map));
+  } catch {
+    // noop
+  }
+}
 
 // Datos de demostración iniciales
 const INITIAL_DEMO_USERS: Profile[] = [
@@ -330,6 +377,7 @@ const INITIAL_DEMO_ASSIGNMENTS: WorkoutAssignment[] = [
 // Helper para persistencia local en demo
 class LocalDataStore {
   users = [...INITIAL_DEMO_USERS];
+  credentials = getStoredCredentials();
 
   get clients(): Profile[] {
     return this.users.filter(u => u.role === 'client');
@@ -387,32 +435,62 @@ export const dataService = {
     }
   },
 
-  // Crear o invitar cliente
-  async addClient(clientData: Partial<Profile>): Promise<Profile> {
+  // Crear o invitar cliente generando credenciales seguras
+  async addClient(clientData: Partial<Profile>): Promise<{ client: Profile; generatedPassword: string }> {
     const emailNorm = (clientData.email || '').trim().toLowerCase();
-    
+    const generatedPassword = generateRandomPassword();
+
     // Validar duplicado en store local
     if (emailNorm) {
-      const exists = localStore.clients.some(c => c.email.trim().toLowerCase() === emailNorm);
+      const exists = localStore.users.some(u => u.email.trim().toLowerCase() === emailNorm);
       if (exists) {
-        throw new Error(`Ya existe un cliente registrado con el correo: ${clientData.email}`);
+        throw new Error(`Ya existe un usuario registrado con el correo: ${clientData.email}`);
+      }
+    }
+
+    let authUserId = `client-${Date.now()}`;
+
+    // Intentar registrar usuario en Supabase auth de forma aislada sin cerrar la sesión del coach
+    if (standaloneAuth && emailNorm) {
+      try {
+        const { data: authData, error: authError } = await standaloneAuth.auth.signUp({
+          email: emailNorm,
+          password: generatedPassword,
+          options: {
+            data: {
+              full_name: clientData.full_name || emailNorm.split('@')[0],
+              role: 'client',
+            },
+          },
+        });
+        if (!authError && authData.user) {
+          authUserId = authData.user.id;
+        }
+      } catch (err) {
+        console.warn('Registro auth de cliente en Supabase:', err);
       }
     }
 
     const newClient: Profile = {
-      id: `client-${Date.now()}`,
-      email: clientData.email || '',
-      full_name: clientData.full_name || 'Nuevo Cliente',
+      id: authUserId,
+      email: emailNorm,
+      full_name: clientData.full_name?.trim() || emailNorm.split('@')[0],
       role: 'client',
       trainer_id: clientData.trainer_id || 'trainer-1',
-      phone: clientData.phone,
-      medical_history: clientData.medical_history,
-      goals: clientData.goals,
+      phone: clientData.phone?.trim() || null,
+      medical_history: clientData.medical_history?.trim() || null,
+      goals: clientData.goals?.trim() || null,
+      is_active: true, // Activado directamente por su entrenador
       created_at: new Date().toISOString(),
+      last_login_at: null,
     };
 
+    // Guardar credenciales generadas
+    localStore.credentials[emailNorm] = generatedPassword;
+    saveCredentials(localStore.credentials);
+
     try {
-      // Validar si existe en Supabase
+      // Validar si ya existe en Supabase profiles
       if (emailNorm) {
         const { data: existingUser } = await supabase
           .from('profiles')
@@ -427,12 +505,18 @@ export const dataService = {
 
       const { data, error } = await supabase
         .from('profiles')
-        .insert([newClient])
+        .upsert([newClient], { onConflict: 'id' })
         .select()
         .single();
 
       if (!error && data) {
-        return data;
+        const idx = localStore.users.findIndex(u => u.id === data.id || u.email.toLowerCase() === emailNorm);
+        if (idx >= 0) {
+          localStore.users[idx] = data;
+        } else {
+          localStore.users.push(data);
+        }
+        return { client: data, generatedPassword };
       }
     } catch (e: any) {
       if (e.message && e.message.includes('Ya existe')) {
@@ -441,8 +525,8 @@ export const dataService = {
       console.warn('Fallback a store local para agregar cliente:', e);
     }
 
-    localStore.clients.push(newClient);
-    return newClient;
+    localStore.users.push(newClient);
+    return { client: newClient, generatedPassword };
   },
 
   // Obtener rutinas creadas por el entrenador
@@ -924,5 +1008,32 @@ export const dataService = {
     }
 
     return { allowed: true };
+  },
+
+  // Obtener credenciales generadas para un cliente
+  getClientCredentials(email: string): string | null {
+    const norm = email.trim().toLowerCase();
+    return localStore.credentials[norm] || null;
+  },
+
+  // Verificar credenciales generadas
+  verifyCredentials(email: string, pass: string): boolean {
+    const norm = email.trim().toLowerCase();
+    return localStore.credentials[norm] === pass;
+  },
+
+  // Registrar un usuario pendiente de activación por el admin
+  registerPendingUser(profile: Profile, password?: string): void {
+    const norm = profile.email.trim().toLowerCase();
+    if (password) {
+      localStore.credentials[norm] = password;
+      saveCredentials(localStore.credentials);
+    }
+    const idx = localStore.users.findIndex(u => u.email.toLowerCase() === norm);
+    if (idx >= 0) {
+      localStore.users[idx] = { ...localStore.users[idx], ...profile };
+    } else {
+      localStore.users.unshift(profile);
+    }
   },
 };

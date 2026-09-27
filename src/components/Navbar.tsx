@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dumbbell, User, LogOut, ArrowLeftRight } from 'lucide-react';
+import { Dumbbell, User, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
@@ -7,7 +7,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenAuthModal }) => {
-  const { profile, logout, switchDemoRole, isDemoMode } = useAuth();
+  const { profile, logout } = useAuth();
 
   return (
     <header className="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-md sticky top-0 z-40 transition-all">
@@ -32,31 +32,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAuthModal }) => {
 
         {/* Right Actions & Account Status */}
         <div className="flex items-center gap-1.5 sm:gap-3">
-          {/* Demo account switcher */}
-          {isDemoMode && profile && (
-            <button
-              onClick={() => {
-                const nextRole = profile.role === 'trainer' ? 'client' : profile.role === 'client' ? 'admin' : 'trainer';
-                switchDemoRole(nextRole);
-              }}
-              className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 px-2.5 sm:px-3 py-1.5 rounded-xl transition-all"
-              title="Cambiar rol de usuario Demo (Entrenador / Cliente / Administrador)"
-            >
-              <ArrowLeftRight className="h-3.5 w-3.5 text-purple-400 shrink-0" />
-              <span className="hidden sm:inline text-slate-400">Rol:</span>
-              <span
-                className={`font-semibold capitalize ${
-                  profile.role === 'admin'
-                    ? 'text-purple-400'
-                    : profile.role === 'trainer'
-                    ? 'text-emerald-400'
-                    : 'text-teal-400'
-                }`}
-              >
-                {profile.role === 'admin' ? 'Admin' : profile.role === 'trainer' ? 'Entrenador' : 'Cliente'}
-              </span>
-            </button>
-          )}
 
           {profile ? (
             <div className="flex items-center gap-2 pl-1 sm:pl-2 border-l border-slate-800">

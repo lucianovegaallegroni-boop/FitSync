@@ -29,7 +29,7 @@ export const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'trainer' | 'client' | 'admin'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
 
   // Modal de edición
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
@@ -69,6 +69,10 @@ export const AdminDashboard: React.FC = () => {
     'Uso indebido de la plataforma o spam',
     'Otro (especificar abajo)',
   ];
+
+  const isPendingUser = (u: Profile) =>
+    u.is_active === false &&
+    Boolean(u.deactivation_reason && u.deactivation_reason.toLowerCase().includes('pendiente'));
 
   const loadData = async () => {
     setLoading(true);
@@ -112,7 +116,8 @@ export const AdminDashboard: React.FC = () => {
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'active' && u.is_active !== false) ||
-      (statusFilter === 'inactive' && u.is_active === false);
+      (statusFilter === 'pending' && isPendingUser(u)) ||
+      (statusFilter === 'inactive' && u.is_active === false && !isPendingUser(u));
 
     return matchesSearch && matchesRole && matchesStatus;
   });
@@ -121,7 +126,8 @@ export const AdminDashboard: React.FC = () => {
   const totalUsersCount = users.length;
   const activeCoachesCount = users.filter((u) => u.role === 'trainer' && u.is_active !== false).length;
   const activeClientsCount = users.filter((u) => u.role === 'client' && u.is_active !== false).length;
-  const inactiveUsersCount = users.filter((u) => u.is_active === false).length;
+  const pendingActivationCount = users.filter((u) => isPendingUser(u)).length;
+  const inactiveUsersCount = users.filter((u) => u.is_active === false && !isPendingUser(u)).length;
   const totalLoginsThisMonth = loginStats.length > 0 ? loginStats[loginStats.length - 1].logins : 0;
 
   // Apertura modal de edición
@@ -200,6 +206,17 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Confirmar activación directa de usuario pendiente
+  const handleConfirmActivate = async (user: Profile) => {
+    try {
+      const updated = await dataService.setUserActiveStatus(user.id, true);
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      showNotification('success', `¡Cuenta de "${updated.full_name}" activada y autorizada con éxito! El usuario ya puede iniciar sesión.`);
+    } catch {
+      showNotification('error', 'Error al activar la cuenta del usuario.');
+    }
+  };
+
   // Valor máximo para la escala del gráfico
   const peakLogins = Math.max(...loginStats.map((s) => s.logins), 100);
   const maxLogins = Math.ceil(peakLogins / 100) * 100;
@@ -262,6 +279,24 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
+      {/* Alerta de usuarios pendientes de activación */}
+      {pendingActivationCount > 0 && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-200 text-xs shadow-lg animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <Clock className="h-5 w-5 text-amber-400 shrink-0 animate-pulse" />
+            <span>
+              Hay <strong className="text-white font-bold">{pendingActivationCount}</strong> {pendingActivationCount === 1 ? 'nuevo usuario registrado' : 'nuevos usuarios registrados'} que requiere{pendingActivationCount === 1 ? '' : 'n'} aprobación y activación del administrador para poder acceder.
+            </span>
+          </div>
+          <button
+            onClick={() => setStatusFilter('pending')}
+            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs whitespace-nowrap self-start sm:self-auto transition-colors shadow-md shadow-amber-500/20"
+          >
+            Ver Pendientes ({pendingActivationCount})
+          </button>
+        </div>
+      )}
+
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
@@ -294,18 +329,20 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
           <div className="text-2xl font-black text-teal-400">{activeClientsCount}</div>
-          <p className="text-[11px] text-slate-500 mt-1">Clientes con suscripción vigente</p>
+          <p className="text-[11px] text-slate-500 mt-1">Clientes con acceso activo</p>
         </div>
 
         <div className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-slate-400">Cuentas Inactivas</span>
-            <div className="h-8 w-8 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
-              <UserX className="h-4 w-4" />
+            <span className="text-xs font-medium text-slate-400">Pendientes / Inactivos</span>
+            <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <Clock className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-rose-400">{inactiveUsersCount}</div>
-          <p className="text-[11px] text-slate-500 mt-1">Acceso revocado por admin</p>
+          <div className="text-2xl font-black text-amber-400">{pendingActivationCount + inactiveUsersCount}</div>
+          <p className="text-[11px] text-slate-500 mt-1">
+            {pendingActivationCount} pendientes • {inactiveUsersCount} desactivados
+          </p>
         </div>
 
         <div className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
@@ -544,19 +581,27 @@ export const AdminDashboard: React.FC = () => {
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-slate-500 font-medium mr-1">Estado:</span>
-            {(['all', 'active', 'inactive'] as const).map((s) => (
+            {(['all', 'active', 'pending', 'inactive'] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
                 className={`px-3 py-1 rounded-xl text-xs font-medium transition-all ${
                   statusFilter === s
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
+                    ? s === 'pending'
+                      ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                      : 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
                     : 'bg-slate-950 text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
               >
-                {s === 'all' ? 'Todos' : s === 'active' ? 'Activos' : 'Desactivados'}
+                {s === 'all'
+                  ? 'Todos'
+                  : s === 'active'
+                  ? 'Activos'
+                  : s === 'pending'
+                  ? `Pendientes (${pendingActivationCount})`
+                  : 'Desactivados'}
               </button>
             ))}
           </div>
@@ -585,12 +630,13 @@ export const AdminDashboard: React.FC = () => {
               ) : (
                 filteredUsers.map((user) => {
                   const isActive = user.is_active !== false;
+                  const isPending = isPendingUser(user);
 
                   return (
                     <tr
                       key={user.id}
                       className={`hover:bg-slate-900/60 transition-colors ${
-                        !isActive ? 'bg-rose-950/10' : ''
+                        isPending ? 'bg-amber-950/15' : !isActive ? 'bg-rose-950/10' : ''
                       }`}
                     >
                       {/* Usuario */}
@@ -657,6 +703,11 @@ export const AdminDashboard: React.FC = () => {
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                             Activa
                           </span>
+                        ) : isPending ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            <Clock className="h-3 w-3 text-amber-400 animate-pulse" />
+                            Pendiente
+                          </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30">
                             <UserX className="h-3 w-3" />
@@ -669,7 +720,12 @@ export const AdminDashboard: React.FC = () => {
                       <td className="py-3.5 px-3">
                         {!isActive ? (
                           <div className="max-w-[220px]">
-                            <span className="text-rose-300 font-medium block truncate text-[11px]" title={user.deactivation_reason || ''}>
+                            <span
+                              className={`font-medium block truncate text-[11px] ${
+                                isPending ? 'text-amber-300' : 'text-rose-300'
+                              }`}
+                              title={user.deactivation_reason || ''}
+                            >
                               {user.deactivation_reason || 'Sin motivo especificado'}
                             </span>
                             {user.deactivated_at && (
@@ -724,6 +780,15 @@ export const AdminDashboard: React.FC = () => {
                               }
                             >
                               <Power className="h-3.5 w-3.5" />
+                            </button>
+                          ) : isPending ? (
+                            <button
+                              onClick={() => handleConfirmActivate(user)}
+                              className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-[11px] flex items-center gap-1 shadow-md shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95"
+                              title="Aprobar y activar acceso a la plataforma"
+                            >
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              <span>Activar Cuenta</span>
                             </button>
                           ) : (
                             <button

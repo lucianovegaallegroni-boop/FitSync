@@ -24,7 +24,10 @@ import {
   Trash2,
   Utensils,
   Copy,
-  Download
+  Download,
+  Key,
+  Check,
+  Send
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { dataService, INITIAL_DEMO_PROGRESS } from '../../services/dataService';
@@ -80,6 +83,9 @@ export const TrainerDashboard: React.FC = () => {
   const [newClientMedical, setNewClientMedical] = useState('');
   const [clientError, setClientError] = useState('');
   const [isCreatingClient, setIsCreatingClient] = useState(false);
+  const [newlyCreatedAccount, setNewlyCreatedAccount] = useState<{ client: Profile; password: string } | null>(null);
+  const [copiedPassword, setCopiedPassword] = useState(false);
+  const [copiedMessage, setCopiedMessage] = useState(false);
 
   // Estados para constructor de rutinas
   const [showWorkoutModal, setShowWorkoutModal] = useState(false);
@@ -200,7 +206,7 @@ export const TrainerDashboard: React.FC = () => {
 
     setIsCreatingClient(true);
     try {
-      const created = await dataService.addClient({
+      const { client: created, generatedPassword } = await dataService.addClient({
         email: newClientEmail.trim(),
         full_name: newClientName.trim(),
         phone: newClientPhone.trim(),
@@ -215,6 +221,7 @@ export const TrainerDashboard: React.FC = () => {
       });
 
       setShowAddClientModal(false);
+      setNewlyCreatedAccount({ client: created, password: generatedPassword });
       setNewClientName('');
       setNewClientEmail('');
       setNewClientPhone('');
@@ -1018,7 +1025,22 @@ export const TrainerDashboard: React.FC = () => {
                       <span>Registrado: {new Date(selectedClient.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {dataService.getClientCredentials(selectedClient.email) && (
+                      <button
+                        onClick={() => {
+                          const password = dataService.getClientCredentials(selectedClient.email);
+                          if (password) {
+                            setNewlyCreatedAccount({ client: selectedClient, password });
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-xs font-semibold text-amber-300 hover:text-amber-200 rounded-lg border border-amber-500/30 flex items-center gap-1.5 transition-colors"
+                        title="Ver credenciales de acceso de este cliente"
+                      >
+                        <Key className="h-3.5 w-3.5" />
+                        <span>Ver Acceso</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => setActiveTab('nutrition')}
                       className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 rounded-lg border border-slate-700 transition-colors"
@@ -1939,6 +1961,119 @@ export const TrainerDashboard: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CREDENCIALES GENERADAS DEL CLIENTE */}
+      {newlyCreatedAccount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
+          <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl relative text-left">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">¡Cliente Registrado con Éxito!</h3>
+                <p className="text-xs text-slate-400">
+                  La cuenta ha sido generada y activada. Comparte estos datos de acceso con tu cliente.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3 mb-5">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                <span className="text-xs text-slate-400">Nombre:</span>
+                <span className="text-xs font-semibold text-white">{newlyCreatedAccount.client.full_name || 'Sin nombre'}</span>
+              </div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                <span className="text-xs text-slate-400">Usuario / Correo:</span>
+                <span className="text-xs font-mono font-medium text-emerald-300">{newlyCreatedAccount.client.email}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-slate-400 block">Contraseña Temporal:</span>
+                  <span className="text-sm font-mono font-bold text-amber-300 tracking-wider">
+                    {newlyCreatedAccount.password}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(newlyCreatedAccount.password);
+                    setCopiedPassword(true);
+                    setTimeout(() => setCopiedPassword(false), 2500);
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700/80 flex items-center gap-1.5 transition-colors"
+                >
+                  {copiedPassword ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-400" />
+                      <span className="text-emerald-400 font-semibold">¡Copiada!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>Copiar Contraseña</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 mb-6">
+              <button
+                type="button"
+                onClick={() => {
+                  const msg = `¡Hola ${newlyCreatedAccount.client.full_name || ''}! Te he dado de alta en FitSync como tu entrenador para gestionar tus rutinas y nutrición.\n\nTus credenciales de acceso son:\n📧 Correo: ${newlyCreatedAccount.client.email}\n🔑 Contraseña: ${newlyCreatedAccount.password}\n\nIngresa aquí: ${window.location.origin}`;
+                  navigator.clipboard.writeText(msg);
+                  setCopiedMessage(true);
+                  setTimeout(() => setCopiedMessage(false), 2500);
+                }}
+                className="w-full py-2.5 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+              >
+                {copiedMessage ? (
+                  <>
+                    <Check className="h-4 w-4 text-emerald-400" />
+                    <span>¡Mensaje completo copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    <span>Copiar mensaje completo con credenciales</span>
+                  </>
+                )}
+              </button>
+
+              {newlyCreatedAccount.client.phone && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cleanPhone = (newlyCreatedAccount.client.phone || '').replace(/[^0-9]/g, '');
+                    const msg = encodeURIComponent(`¡Hola ${newlyCreatedAccount.client.full_name || ''}! Te he dado de alta en FitSync como tu entrenador para gestionar tus rutinas y nutrición.\n\nTus credenciales de acceso son:\n📧 Correo: ${newlyCreatedAccount.client.email}\n🔑 Contraseña: ${newlyCreatedAccount.password}\n\nIngresa aquí: ${window.location.origin}`);
+                    window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+                  }}
+                  className="w-full py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors shadow-lg shadow-emerald-500/20"
+                >
+                  <Send className="h-4 w-4" />
+                  <span>Enviar credenciales por WhatsApp</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setNewlyCreatedAccount(null);
+                  setCopiedPassword(false);
+                  setCopiedMessage(false);
+                }}
+                className="w-full sm:w-auto px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl text-xs transition-colors"
+              >
+                Cerrar y Continuar
+              </button>
+            </div>
           </div>
         </div>
       )}

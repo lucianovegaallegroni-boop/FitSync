@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   medical_history TEXT,
   goals TEXT,
   avatar_url TEXT,
-  is_active BOOLEAN NOT NULL DEFAULT true,
-  deactivation_reason TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT false,
+  deactivation_reason TEXT DEFAULT 'Cuenta pendiente de activación por un administrador',
   deactivated_at TIMESTAMPTZ,
   last_login_at TIMESTAMPTZ DEFAULT now(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -258,13 +258,18 @@ CREATE POLICY "Entrenadores ven los registros diarios de sus clientes"
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name, role)
+  INSERT INTO public.profiles (id, email, full_name, role, is_active, deactivation_reason)
   VALUES (
     new.id,
     new.email,
     COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
-    COALESCE(new.raw_user_meta_data->>'role', 'trainer')
-  );
+    COALESCE(new.raw_user_meta_data->>'role', 'trainer'),
+    false,
+    'Cuenta pendiente de activación por un administrador'
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    full_name = EXCLUDED.full_name,
+    role = EXCLUDED.role;
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
