@@ -45,6 +45,30 @@ export interface WorkoutAssignment {
   workout?: Workout;
 }
 
+export interface MealFoodItem {
+  id: string;
+  name: string;
+  portion?: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+}
+
+export interface MealSlot {
+  id: string;
+  meal_number: number;
+  name: string; // e.g. "Desayuno", "Media mañana", "Almuerzo", "Merienda", "Cena"
+  time_suggested?: string;
+  foods: MealFoodItem[];
+}
+
+export interface DayDietPlan {
+  id: string;
+  day_name: string; // e.g. "Todos los días", "Lunes", "Martes", etc.
+  meals: MealSlot[];
+}
+
 export interface NutritionGoal {
   id: string;
   client_id: string;
@@ -52,6 +76,8 @@ export interface NutritionGoal {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  meals_per_day?: number;
+  diet_days?: DayDietPlan[];
   start_date: string;
   notes?: string;
   created_at: string;
@@ -78,5 +104,6 @@ export interface DailyNutritionLog {
   calories_met: boolean;
   protein_met: boolean;
   water_liters: number;
+  completed_meal_ids?: string[];
   notes?: string;
 }

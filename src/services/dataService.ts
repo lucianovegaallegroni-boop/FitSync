@@ -84,6 +84,53 @@ const INITIAL_DEMO_NUTRITION: Record<string, NutritionGoal> = {
     protein_g: 165,
     carbs_g: 220,
     fat_g: 65,
+    meals_per_day: 4,
+    diet_days: [
+      {
+        id: 'day-1',
+        day_name: 'Todos los días (Estándar)',
+        meals: [
+          {
+            id: 'm-1',
+            meal_number: 1,
+            name: 'Desayuno Energético',
+            time_suggested: '08:30',
+            foods: [
+              { id: 'f-1', name: 'Huevos revueltos (3 huevos) con espinacas y 2 tostadas integrales', portion: '1 plato', calories: 420, protein_g: 28, carbs_g: 32, fat_g: 20 },
+              { id: 'f-2', name: 'Bowl de avena cocida con leche vegetal y frutos rojos', portion: '1 bowl (60g avena)', calories: 280, protein_g: 14, carbs_g: 48, fat_g: 4 }
+            ]
+          },
+          {
+            id: 'm-2',
+            meal_number: 2,
+            name: 'Almuerzo / Comida Principal',
+            time_suggested: '13:30',
+            foods: [
+              { id: 'f-3', name: 'Pechuga de pollo a la plancha con arroz basmati y brócoli', portion: '200g pollo + 150g arroz', calories: 610, protein_g: 54, carbs_g: 68, fat_g: 10 },
+              { id: 'f-4', name: 'Aceite de oliva virgen extra para aderezar', portion: '1 cucharada sopera', calories: 110, protein_g: 0, carbs_g: 0, fat_g: 12 }
+            ]
+          },
+          {
+            id: 'm-3',
+            meal_number: 3,
+            name: 'Merienda Pre-Entreno',
+            time_suggested: '17:30',
+            foods: [
+              { id: 'f-5', name: 'Yogur griego natural sin azúcar con nueces y 1 manzana', portion: '200g yogur + 20g nueces', calories: 330, protein_g: 21, carbs_g: 22, fat_g: 14 }
+            ]
+          },
+          {
+            id: 'm-4',
+            meal_number: 4,
+            name: 'Cena Recuperadora',
+            time_suggested: '21:00',
+            foods: [
+              { id: 'f-6', name: 'Filete de salmón al horno con patata asada y ensalada verde', portion: '180g salmón + 150g patata', calories: 450, protein_g: 48, carbs_g: 50, fat_g: 5 }
+            ]
+          }
+        ]
+      }
+    ],
     start_date: new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0],
     notes: 'Priorizar proteína magra en almuerzo y cena. 2.5L de agua al día.',
     created_at: new Date().toISOString(),
@@ -95,6 +142,42 @@ const INITIAL_DEMO_NUTRITION: Record<string, NutritionGoal> = {
     protein_g: 130,
     carbs_g: 180,
     fat_g: 55,
+    meals_per_day: 3,
+    diet_days: [
+      {
+        id: 'day-2',
+        day_name: 'Todos los días (Déficit)',
+        meals: [
+          {
+            id: 'm-201',
+            meal_number: 1,
+            name: 'Desayuno Proteico',
+            time_suggested: '08:30',
+            foods: [
+              { id: 'f-201', name: 'Tortilla francesa (2 huevos) con pavo y tostada', portion: '1 plato', calories: 380, protein_g: 30, carbs_g: 25, fat_g: 15 }
+            ]
+          },
+          {
+            id: 'm-202',
+            meal_number: 2,
+            name: 'Almuerzo Equilibrado',
+            time_suggested: '14:00',
+            foods: [
+              { id: 'f-202', name: 'Lomo de merluza con quinoa y verduras salteadas', portion: '200g merluza + 80g quinoa', calories: 550, protein_g: 48, carbs_g: 65, fat_g: 12 }
+            ]
+          },
+          {
+            id: 'm-203',
+            meal_number: 3,
+            name: 'Cena Ligera',
+            time_suggested: '21:00',
+            foods: [
+              { id: 'f-203', name: 'Ensalada completa con atún al natural, huevo cocido y aguacate', portion: '1 ensaladera', calories: 450, protein_g: 40, carbs_g: 30, fat_g: 18 }
+            ]
+          }
+        ]
+      }
+    ],
     start_date: new Date(Date.now() - 10 * 86400000).toISOString().split('T')[0],
     notes: 'Déficit calórico suave de 300 kcal. Frutas en snacks.',
     created_at: new Date().toISOString(),

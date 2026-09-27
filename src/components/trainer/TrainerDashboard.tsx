@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users,
   Dumbbell,
@@ -20,11 +20,43 @@ import {
   Search,
   Target,
   CheckCircle2,
-  ArrowUpRight
+  ArrowUpRight,
+  Trash2,
+  Utensils,
+  Copy
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { dataService, INITIAL_DEMO_PROGRESS } from '../../services/dataService';
-import { Profile, Workout, ProgressLog, NutritionGoal } from '../../types/database';
+import { Profile, Workout, ProgressLog, NutritionGoal, DayDietPlan, MealSlot, MealFoodItem } from '../../types/database';
+
+function createDefaultMeals(count: number): MealSlot[] {
+  const defaultNamesMap: Record<number, string[]> = {
+    2: ['Comida 1: Desayuno / Almuerzo', 'Comida 2: Cena'],
+    3: ['Comida 1: Desayuno', 'Comida 2: Almuerzo', 'Comida 3: Cena'],
+    4: ['Comida 1: Desayuno', 'Comida 2: Almuerzo', 'Comida 3: Merienda', 'Comida 4: Cena'],
+    5: ['Comida 1: Desayuno', 'Comida 2: Media Mañana', 'Comida 3: Almuerzo', 'Comida 4: Merienda', 'Comida 5: Cena'],
+    6: ['Comida 1: Desayuno', 'Comida 2: Media Mañana', 'Comida 3: Almuerzo', 'Comida 4: Merienda', 'Comida 5: Cena', 'Comida 6: Post-Entreno']
+  };
+
+  const timesMap: Record<number, string[]> = {
+    2: ['11:00', '20:30'],
+    3: ['08:30', '14:00', '21:00'],
+    4: ['08:30', '13:30', '17:30', '21:00'],
+    5: ['08:00', '11:00', '14:00', '17:30', '21:00'],
+    6: ['08:00', '11:00', '14:00', '17:00', '19:30', '21:30']
+  };
+
+  const names = defaultNamesMap[count] || Array.from({ length: count }, (_, i) => `Comida ${i + 1}`);
+  const times = timesMap[count] || Array.from({ length: count }, () => '12:00');
+
+  return names.map((name, i) => ({
+    id: `meal-${Date.now()}-${i + 1}-${Math.random().toString(36).substring(2, 6)}`,
+    meal_number: i + 1,
+    name: name,
+    time_suggested: times[i] || '12:00',
+    foods: []
+  }));
+}
 
 export const TrainerDashboard: React.FC = () => {
   const { profile } = useAuth();
@@ -63,13 +95,24 @@ export const TrainerDashboard: React.FC = () => {
   const [assignWorkoutId, setAssignWorkoutId] = useState('');
   const [assignSuccess, setAssignSuccess] = useState(false);
 
-  // Asignar nutrición
+  // Asignar nutrición y dietas
   const [macroCalories, setMacroCalories] = useState(2200);
   const [macroProtein, setMacroProtein] = useState(160);
   const [macroCarbs, setMacroCarbs] = useState(230);
   const [macroFat, setMacroFat] = useState(65);
   const [macroNotes, setMacroNotes] = useState('');
   const [nutritionSuccess, setNutritionSuccess] = useState(false);
+  const [mealsPerDay, setMealsPerDay] = useState(4);
+  const [dietDays, setDietDays] = useState<DayDietPlan[]>([
+    {
+      id: 'day-std',
+      day_name: 'Todos los días (Estándar)',
+      meals: createDefaultMeals(4)
+    }
+  ]);
+  const [activeDayIndex, setActiveDayIndex] = useState(0);
+  const [showAddDayModal, setShowAddDayModal] = useState(false);
+  const [newDayName, setNewDayName] = useState('Lunes');
 
   useEffect(() => {
     loadData();
@@ -108,6 +151,35 @@ export const TrainerDashboard: React.FC = () => {
       setMacroCarbs(nut.carbs_g);
       setMacroFat(nut.fat_g);
       setMacroNotes(nut.notes || '');
+      const count = nut.meals_per_day || 4;
+      setMealsPerDay(count);
+      if (nut.diet_days && nut.diet_days.length > 0) {
+        setDietDays(nut.diet_days);
+      } else {
+        setDietDays([
+          {
+            id: `day-${Date.now()}`,
+            day_name: 'Todos los días (Estándar)',
+            meals: createDefaultMeals(count)
+          }
+        ]);
+      }
+      setActiveDayIndex(0);
+    } else {
+      setMacroCalories(2200);
+      setMacroProtein(160);
+      setMacroCarbs(230);
+      setMacroFat(65);
+      setMacroNotes('');
+      setMealsPerDay(4);
+      setDietDays([
+        {
+          id: `day-${Date.now()}`,
+          day_name: 'Todos los días (Estándar)',
+          meals: createDefaultMeals(4)
+        }
+      ]);
+      setActiveDayIndex(0);
     }
   };
 
@@ -213,6 +285,151 @@ export const TrainerDashboard: React.FC = () => {
     setTimeout(() => setAssignSuccess(false), 3000);
   };
 
+  const handleChangeMealsPerDay = (newCount: number) => {
+    setMealsPerDay(newCount);
+    setDietDays(prevDays => {
+      return prevDays.map((day, idx) => {
+        if (idx !== activeDayIndex) return day;
+        let newMeals = [...day.meals];
+        if (newMeals.length < newCount) {
+          const extraDefaults = createDefaultMeals(newCount);
+          for (let i = newMeals.length; i < newCount; i++) {
+            newMeals.push({
+              ...extraDefaults[i],
+              id: `meal-${Date.now()}-${i + 1}-${Math.random().toString(36).substring(2, 6)}`,
+              meal_number: i + 1,
+            });
+          }
+        } else if (newMeals.length > newCount) {
+          newMeals = newMeals.slice(0, newCount);
+        }
+        return { ...day, meals: newMeals };
+      });
+    });
+  };
+
+  const handleAddDay = (dayName: string) => {
+    const trimmed = dayName.trim() || `Día ${dietDays.length + 1}`;
+    const newDay: DayDietPlan = {
+      id: `day-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      day_name: trimmed,
+      meals: createDefaultMeals(mealsPerDay)
+    };
+    setDietDays(prev => [...prev, newDay]);
+    setActiveDayIndex(dietDays.length);
+  };
+
+  const handleDuplicateCurrentDay = () => {
+    const current = dietDays[activeDayIndex];
+    if (!current) return;
+    const duplicated: DayDietPlan = {
+      id: `day-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      day_name: `${current.day_name} (Copia)`,
+      meals: current.meals.map((m, mIdx) => ({
+        ...m,
+        id: `meal-${Date.now()}-${mIdx + 1}-${Math.random().toString(36).substring(2, 6)}`,
+        foods: m.foods.map(f => ({
+          ...f,
+          id: `food-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
+        }))
+      }))
+    };
+    setDietDays(prev => [...prev, duplicated]);
+    setActiveDayIndex(dietDays.length);
+  };
+
+  const handleRemoveDay = (index: number) => {
+    if (dietDays.length <= 1) return;
+    setDietDays(prev => prev.filter((_, i) => i !== index));
+    if (activeDayIndex >= index && activeDayIndex > 0) {
+      setActiveDayIndex(activeDayIndex - 1);
+    }
+  };
+
+  const handleUpdateMealMeta = (mealIndex: number, field: 'name' | 'time_suggested', value: string) => {
+    setDietDays(prev => {
+      const updated = [...prev];
+      const day = { ...updated[activeDayIndex] };
+      const meals = [...day.meals];
+      meals[mealIndex] = { ...meals[mealIndex], [field]: value };
+      day.meals = meals;
+      updated[activeDayIndex] = day;
+      return updated;
+    });
+  };
+
+  const handleAddFoodToMeal = (mealIndex: number) => {
+    setDietDays(prev => {
+      const updated = [...prev];
+      const day = { ...updated[activeDayIndex] };
+      const meals = [...day.meals];
+      const foods = [...meals[mealIndex].foods];
+      foods.push({
+        id: `food-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        name: '',
+        portion: '100g',
+        calories: 0,
+        protein_g: 0,
+        carbs_g: 0,
+        fat_g: 0
+      });
+      meals[mealIndex] = { ...meals[mealIndex], foods };
+      day.meals = meals;
+      updated[activeDayIndex] = day;
+      return updated;
+    });
+  };
+
+  const handleUpdateFoodItem = (mealIndex: number, foodIndex: number, field: keyof MealFoodItem, value: any) => {
+    setDietDays(prev => {
+      const updated = [...prev];
+      const day = { ...updated[activeDayIndex] };
+      const meals = [...day.meals];
+      const foods = [...meals[mealIndex].foods];
+      foods[foodIndex] = { ...foods[foodIndex], [field]: value };
+      meals[mealIndex] = { ...meals[mealIndex], foods };
+      day.meals = meals;
+      updated[activeDayIndex] = day;
+      return updated;
+    });
+  };
+
+  const handleRemoveFoodItem = (mealIndex: number, foodIndex: number) => {
+    setDietDays(prev => {
+      const updated = [...prev];
+      const day = { ...updated[activeDayIndex] };
+      const meals = [...day.meals];
+      const foods = meals[mealIndex].foods.filter((_, i) => i !== foodIndex);
+      meals[mealIndex] = { ...meals[mealIndex], foods };
+      day.meals = meals;
+      updated[activeDayIndex] = day;
+      return updated;
+    });
+  };
+
+  const currentDietDay = dietDays[activeDayIndex] || dietDays[0];
+
+  const calculatedDayTotals = useMemo(() => {
+    if (!currentDietDay) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    let cal = 0, p = 0, c = 0, f = 0;
+    currentDietDay.meals?.forEach(m => {
+      m.foods?.forEach(item => {
+        cal += Number(item.calories) || 0;
+        p += Number(item.protein_g) || 0;
+        c += Number(item.carbs_g) || 0;
+        f += Number(item.fat_g) || 0;
+      });
+    });
+    return { calories: cal, protein: p, carbs: c, fat: f };
+  }, [currentDietDay]);
+
+  const handleSyncCalculatedWithMacros = () => {
+    setMacroCalories(calculatedDayTotals.calories);
+    setMacroProtein(calculatedDayTotals.protein);
+    setMacroCarbs(calculatedDayTotals.carbs);
+    setMacroFat(calculatedDayTotals.fat);
+  };
+
   const handleSaveNutrition = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClient) return;
@@ -222,6 +439,8 @@ export const TrainerDashboard: React.FC = () => {
       protein_g: Number(macroProtein),
       carbs_g: Number(macroCarbs),
       fat_g: Number(macroFat),
+      meals_per_day: Number(mealsPerDay),
+      diet_days: dietDays,
       start_date: new Date().toISOString().split('T')[0],
       notes: macroNotes,
     });
@@ -997,104 +1216,498 @@ export const TrainerDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: NUTRITION MACROS */}
+      {/* TAB 3: NUTRITION & DIET PLANNER */}
       {activeTab === 'nutrition' && (
-        <div className="max-w-2xl mx-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-6 sm:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="h-12 w-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <Apple className="h-6 w-6" />
+        <div className="space-y-6">
+          {/* Header Banner */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-7 shadow-xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 shadow-lg shadow-emerald-500/10">
+                  <Apple className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                    Planificador de Dietas y Objetivos Nutricionales
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Diseña dietas completas por alimentos y macronutrientes, distribuidas por comidas y días para tu cliente.
+                  </p>
+                </div>
+              </div>
+
+              {/* Selector de Cliente Activo */}
+              <div className="flex items-center gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800 shrink-0">
+                <span className="text-xs text-slate-400 font-medium pl-2">Cliente:</span>
+                <select
+                  value={selectedClient?.id || ''}
+                  onChange={(e) => {
+                    const c = clients.find(cl => cl.id === e.target.value);
+                    if (c) handleSelectClient(c);
+                  }}
+                  className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-semibold focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id}>{c.full_name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-white">Asignador de Objetivos Nutricionales</h3>
-              <p className="text-xs text-slate-400">Calcula y asigna las calorías y macronutrientes diarios para tu cliente.</p>
+
+            {nutritionSuccess && (
+              <div className="mt-4 p-3.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs flex items-center gap-2.5 animate-fadeIn">
+                <CheckCircle className="h-4 w-4 shrink-0" />
+                <span className="font-semibold">¡Plan de dieta y metas nutricionales guardados correctamente!</span>
+              </div>
+            )}
+          </div>
+
+          {/* Barra de Configuración: Cantidad de Comidas y Selector de Días */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+              {/* Selector de cantidad de comidas por día */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Utensils className="h-3.5 w-3.5 text-emerald-400" />
+                  Cantidad de Comidas por Día
+                </label>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[2, 3, 4, 5, 6].map(count => (
+                    <button
+                      key={count}
+                      type="button"
+                      onClick={() => handleChangeMealsPerDay(count)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        mealsPerDay === count
+                          ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                          : 'bg-slate-950 text-slate-300 border border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      {count} {count === 1 ? 'comida' : 'comidas'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Acciones de Días */}
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowAddDayModal(true)}
+                  className="flex items-center gap-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Agregar Día</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDuplicateCurrentDay}
+                  title="Duplicar comidas y alimentos de este día"
+                  className="flex items-center gap-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Duplicar Día</span>
+                </button>
+                {dietDays.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveDay(activeDayIndex)}
+                    title="Eliminar este día de la dieta"
+                    className="flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Pestañas de Días */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+              {dietDays.map((d, idx) => (
+                <button
+                  key={d.id || idx}
+                  type="button"
+                  onClick={() => setActiveDayIndex(idx)}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
+                    activeDayIndex === idx
+                      ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/10'
+                      : 'bg-slate-950/80 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                  }`}
+                >
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>{d.day_name}</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300 font-mono">
+                    {d.meals?.length || 0}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 
-          {nutritionSuccess && (
-            <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" /> Metas nutricionales actualizadas correctamente.
+          {/* Constructor de Comidas y Alimentos del Día Activo */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-white text-base flex items-center gap-2">
+                  <span>Comidas para:</span>
+                  <span className="text-emerald-400 font-extrabold">{currentDietDay?.day_name || 'Día 1'}</span>
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Ingresa cada alimento con sus calorías y macronutrientes para cada comida del día.
+                </p>
+              </div>
+
+              {/* Botón sincronizar */}
+              <button
+                type="button"
+                onClick={handleSyncCalculatedWithMacros}
+                className="flex items-center gap-1.5 text-xs bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold px-3 py-1.5 rounded-xl transition-all"
+                title="Copiar las calorías y macros calculadas de los alimentos a los objetivos diarios"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Sincronizar totales con macros</span>
+              </button>
+            </div>
+
+            {/* Listado de Comidas del Día */}
+            <div className="space-y-4">
+              {currentDietDay?.meals?.map((meal, mIdx) => {
+                // Cálculo de subtotales por comida
+                const mealKcal = meal.foods?.reduce((sum, f) => sum + (Number(f.calories) || 0), 0) || 0;
+                const mealProt = meal.foods?.reduce((sum, f) => sum + (Number(f.protein_g) || 0), 0) || 0;
+                const mealCarbs = meal.foods?.reduce((sum, f) => sum + (Number(f.carbs_g) || 0), 0) || 0;
+                const mealFat = meal.foods?.reduce((sum, f) => sum + (Number(f.fat_g) || 0), 0) || 0;
+
+                return (
+                  <div key={meal.id || mIdx} className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3.5">
+                    {/* Cabecera de la Comida */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold font-mono">
+                          Comida {meal.meal_number}
+                        </span>
+                        <input
+                          type="text"
+                          value={meal.name}
+                          onChange={(e) => handleUpdateMealMeta(mIdx, 'name', e.target.value)}
+                          placeholder="Nombre (ej. Desayuno, Almuerzo...)"
+                          className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1 text-sm font-semibold text-white focus:outline-none focus:border-emerald-500 min-w-[200px]"
+                        />
+                        <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1 text-xs text-slate-300">
+                          <Clock className="h-3 w-3 text-slate-400" />
+                          <input
+                            type="time"
+                            value={meal.time_suggested || '12:00'}
+                            onChange={(e) => handleUpdateMealMeta(mIdx, 'time_suggested', e.target.value)}
+                            className="bg-transparent text-xs text-slate-200 focus:outline-none font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Subtotal de la Comida */}
+                      <div className="flex items-center gap-1.5 text-[11px] font-mono shrink-0">
+                        <span className="px-2 py-0.5 rounded-md bg-slate-950 text-slate-200 border border-slate-800 font-bold">
+                          {mealKcal} kcal
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          {mealProt}g P
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                          {mealCarbs}g C
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          {mealFat}g G
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Tabla de Alimentos */}
+                    <div className="space-y-2">
+                      {meal.foods && meal.foods.length > 0 ? (
+                        <div className="space-y-2">
+                          <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-[10px] uppercase font-bold text-slate-400 px-2">
+                            <span className="col-span-4">Nombre del Alimento</span>
+                            <span className="col-span-2">Porción / Cantidad</span>
+                            <span className="col-span-2">Calorías (kcal)</span>
+                            <span className="col-span-1 text-emerald-400">P (g)</span>
+                            <span className="col-span-1 text-sky-400">C (g)</span>
+                            <span className="col-span-1 text-amber-400">G (g)</span>
+                            <span className="col-span-1 text-right">Borrar</span>
+                          </div>
+
+                          {meal.foods.map((food, fIdx) => (
+                            <div
+                              key={food.id || fIdx}
+                              className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-2.5 sm:p-2 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center"
+                            >
+                              <div className="sm:col-span-4">
+                                <label className="sm:hidden block text-[10px] text-slate-400 mb-0.5">Alimento:</label>
+                                <input
+                                  type="text"
+                                  value={food.name}
+                                  onChange={(e) => handleUpdateFoodItem(mIdx, fIdx, 'name', e.target.value)}
+                                  placeholder="Ej. Pechuga de pollo / Avena"
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div className="sm:col-span-2">
+                                <label className="sm:hidden block text-[10px] text-slate-400 mb-0.5">Porción:</label>
+                                <input
+                                  type="text"
+                                  value={food.portion || ''}
+                                  onChange={(e) => handleUpdateFoodItem(mIdx, fIdx, 'portion', e.target.value)}
+                                  placeholder="Ej. 150g, 2 huevos"
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div className="sm:col-span-2">
+                                <label className="sm:hidden block text-[10px] text-slate-400 mb-0.5">Calorías (kcal):</label>
+                                <input
+                                  type="number"
+                                  value={food.calories}
+                                  onChange={(e) => handleUpdateFoodItem(mIdx, fIdx, 'calories', Number(e.target.value))}
+                                  placeholder="Kcal"
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-3 sm:contents gap-2">
+                                <div className="sm:col-span-1">
+                                  <label className="sm:hidden block text-[10px] text-emerald-400 mb-0.5">Proteína (g):</label>
+                                  <input
+                                    type="number"
+                                    value={food.protein_g}
+                                    onChange={(e) => handleUpdateFoodItem(mIdx, fIdx, 'protein_g', Number(e.target.value))}
+                                    placeholder="P (g)"
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-1.5 py-1.5 text-xs text-emerald-400 font-mono focus:outline-none focus:border-emerald-500 text-center"
+                                  />
+                                </div>
+
+                                <div className="sm:col-span-1">
+                                  <label className="sm:hidden block text-[10px] text-sky-400 mb-0.5">Carbos (g):</label>
+                                  <input
+                                    type="number"
+                                    value={food.carbs_g}
+                                    onChange={(e) => handleUpdateFoodItem(mIdx, fIdx, 'carbs_g', Number(e.target.value))}
+                                    placeholder="C (g)"
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-1.5 py-1.5 text-xs text-sky-400 font-mono focus:outline-none focus:border-emerald-500 text-center"
+                                  />
+                                </div>
+
+                                <div className="sm:col-span-1">
+                                  <label className="sm:hidden block text-[10px] text-amber-400 mb-0.5">Grasas (g):</label>
+                                  <input
+                                    type="number"
+                                    value={food.fat_g}
+                                    onChange={(e) => handleUpdateFoodItem(mIdx, fIdx, 'fat_g', Number(e.target.value))}
+                                    placeholder="G (g)"
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-1.5 py-1.5 text-xs text-amber-400 font-mono focus:outline-none focus:border-emerald-500 text-center"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="sm:col-span-1 flex justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveFoodItem(mIdx, fIdx)}
+                                  className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-900 transition-colors"
+                                  title="Eliminar alimento"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-3 text-center bg-slate-950/40 rounded-xl border border-dashed border-slate-800 text-xs text-slate-500">
+                          No hay alimentos agregados a esta comida todavía.
+                        </div>
+                      )}
+
+                      {/* Botón agregar alimento */}
+                      <button
+                        type="button"
+                        onClick={() => handleAddFoodToMeal(mIdx)}
+                        className="w-full py-2 bg-slate-950/80 hover:bg-slate-950 border border-slate-800/80 hover:border-emerald-500/40 text-emerald-400 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Añadir Alimento a Comida {meal.meal_number}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Resumen Calculado de la Dieta & Formulario de Objetivos */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-7 shadow-xl space-y-6">
+            {/* Banner de Totales Calculados */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-950/40 via-slate-950 to-slate-950 border border-emerald-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 block mb-1">
+                  Totales Calculados para {currentDietDay?.day_name}
+                </span>
+                <div className="flex flex-wrap items-center gap-3 font-mono">
+                  <div className="text-white text-base font-extrabold">
+                    {calculatedDayTotals.calories} <span className="text-xs text-slate-400 font-normal">kcal</span>
+                  </div>
+                  <div className="text-emerald-400 text-sm font-bold">
+                    {calculatedDayTotals.protein}g <span className="text-xs text-slate-400 font-normal">Proteína</span>
+                  </div>
+                  <div className="text-sky-400 text-sm font-bold">
+                    {calculatedDayTotals.carbs}g <span className="text-xs text-slate-400 font-normal">Carbohidratos</span>
+                  </div>
+                  <div className="text-amber-400 text-sm font-bold">
+                    {calculatedDayTotals.fat}g <span className="text-xs text-slate-400 font-normal">Grasas</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSyncCalculatedWithMacros}
+                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20 shrink-0"
+              >
+                <Sparkles className="h-4 w-4" />
+                <span>Aplicar a Objetivos Diarios</span>
+              </button>
+            </div>
+
+            {/* Formulario de Metas y Recomendaciones */}
+            <form onSubmit={handleSaveNutrition} className="space-y-4">
+              <h4 className="font-bold text-white text-sm uppercase tracking-wider">
+                Objetivos Diarios Asignados al Atleta
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Calorías Diarias (kcal)</label>
+                  <input
+                    type="number"
+                    required
+                    value={macroCalories}
+                    onChange={(e) => setMacroCalories(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Proteínas (g)</label>
+                  <input
+                    type="number"
+                    required
+                    value={macroProtein}
+                    onChange={(e) => setMacroProtein(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-emerald-400 font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Carbohidratos (g)</label>
+                  <input
+                    type="number"
+                    required
+                    value={macroCarbs}
+                    onChange={(e) => setMacroCarbs(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-sky-400 font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Grasas (g)</label>
+                  <input
+                    type="number"
+                    required
+                    value={macroFat}
+                    onChange={(e) => setMacroFat(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-amber-400 font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Recomendaciones & Pautas Adicionales</label>
+                <textarea
+                  rows={3}
+                  value={macroNotes}
+                  onChange={(e) => setMacroNotes(e.target.value)}
+                  placeholder="Ejemplo: Tomar 2.5L de agua al día, consumir la comida con mayor carga de carbohidratos después de entrenar..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-3.5 rounded-xl text-sm transition-colors shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2"
+              >
+                <CheckCircle className="h-4 w-4" />
+                <span>Guardar Dieta y Notificar al Cliente</span>
+              </button>
+            </form>
+          </div>
+
+          {/* Modal para Agregar Nuevo Día */}
+          {showAddDayModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+                <h4 className="text-base font-bold text-white">Agregar Nuevo Día al Plan</h4>
+                <p className="text-xs text-slate-400">
+                  Selecciona un día de la semana o escribe un nombre personalizado para este día.
+                </p>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo', 'Día Alto en Carbos', 'Día de Descanso'].map(day => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => setNewDayName(day)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                        newDayName === day
+                          ? 'bg-emerald-500 text-slate-950 font-bold'
+                          : 'bg-slate-950 text-slate-300 border border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Nombre del Día</label>
+                  <input
+                    type="text"
+                    value={newDayName}
+                    onChange={(e) => setNewDayName(e.target.value)}
+                    placeholder="Ej. Lunes o Día de Pierna"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddDayModal(false)}
+                    className="px-4 py-2 text-xs text-slate-400 hover:text-white"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newDayName.trim()) {
+                        handleAddDay(newDayName.trim());
+                        setShowAddDayModal(false);
+                      }
+                    }}
+                    className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-colors"
+                  >
+                    Crear Día
+                  </button>
+                </div>
+              </div>
             </div>
           )}
-
-          <form onSubmit={handleSaveNutrition} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Cliente a Asignar</label>
-              <select
-                value={selectedClient?.id || ''}
-                onChange={(e) => {
-                  const c = clients.find(cl => cl.id === e.target.value);
-                  if (c) handleSelectClient(c);
-                }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500"
-              >
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>{c.full_name} ({c.email})</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Calorías Totales Diarias (kcal)</label>
-              <input
-                type="number"
-                required
-                value={macroCalories}
-                onChange={(e) => setMacroCalories(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 font-mono focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Proteínas (g)</label>
-                <input
-                  type="number"
-                  required
-                  value={macroProtein}
-                  onChange={(e) => setMacroProtein(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-emerald-400 font-mono focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Carbohidratos (g)</label>
-                <input
-                  type="number"
-                  required
-                  value={macroCarbs}
-                  onChange={(e) => setMacroCarbs(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-sky-400 font-mono focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Grasas (g)</label>
-                <input
-                  type="number"
-                  required
-                  value={macroFat}
-                  onChange={(e) => setMacroFat(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-amber-400 font-mono focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Recomendaciones & Pautas Adicionales</label>
-              <textarea
-                rows={3}
-                value={macroNotes}
-                onChange={(e) => setMacroNotes(e.target.value)}
-                placeholder="Ejemplo: Beber 3L de agua al día, consumir la mayor carga de carbohidratos en torno al entrenamiento..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-3 rounded-xl text-sm transition-colors shadow-lg shadow-emerald-500/20"
-            >
-              Guardar y Notificar al Cliente
-            </button>
-          </form>
         </div>
       )}
 

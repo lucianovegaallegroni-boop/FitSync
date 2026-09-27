@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS public.workout_assignments (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 5. Objetivos Nutricionales (Macros)
+-- 5. Objetivos Nutricionales y Planes de Dieta
 CREATE TABLE IF NOT EXISTS public.nutrition_goals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS public.nutrition_goals (
   protein_g INTEGER NOT NULL,
   carbs_g INTEGER NOT NULL,
   fat_g INTEGER NOT NULL,
+  meals_per_day INTEGER DEFAULT 4,
+  diet_days JSONB DEFAULT '[]'::jsonb,
   start_date DATE NOT NULL DEFAULT CURRENT_DATE,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -96,6 +98,7 @@ CREATE TABLE IF NOT EXISTS public.daily_nutrition_logs (
   calories_met BOOLEAN NOT NULL DEFAULT false,
   protein_met BOOLEAN NOT NULL DEFAULT false,
   water_liters NUMERIC(3,1) DEFAULT 2.0,
+  completed_meal_ids JSONB DEFAULT '[]'::jsonb,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(client_id, date)

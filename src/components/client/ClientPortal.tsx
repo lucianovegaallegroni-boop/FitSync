@@ -12,7 +12,9 @@ import {
   Sparkles,
   UploadCloud,
   Check,
-  Award
+  Award,
+  Clock,
+  Utensils
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { dataService } from '../../services/dataService';
@@ -24,6 +26,7 @@ export const ClientPortal: React.FC = () => {
 
   const [assignment, setAssignment] = useState<WorkoutAssignment | null>(null);
   const [nutrition, setNutrition] = useState<NutritionGoal | null>(null);
+  const [activeClientDayIndex, setActiveClientDayIndex] = useState(0);
   const [progressLogs, setProgressLogs] = useState<ProgressLog[]>([]);
   const [dailyLog, setDailyLog] = useState<DailyNutritionLog>({
     id: 'temp',
@@ -62,6 +65,30 @@ export const ClientPortal: React.FC = () => {
     setNutrition(nut);
     setProgressLogs(prog);
     setDailyLog(dLog);
+
+    if (nut?.diet_days && nut.diet_days.length > 0) {
+      const dayNamesEs = ['domingo', 'lunes', 'martes', 'miércoles', 'miercoles', 'jueves', 'viernes', 'sábado', 'sabado'];
+      const todayDayName = dayNamesEs[new Date().getDay()];
+      const matchIndex = nut.diet_days.findIndex(d => d.day_name.toLowerCase().includes(todayDayName));
+      if (matchIndex >= 0) {
+        setActiveClientDayIndex(matchIndex);
+      }
+    }
+  };
+
+  const handleToggleMeal = async (mealId: string) => {
+    const list = dailyLog.completed_meal_ids || [];
+    const exists = list.includes(mealId);
+    const updatedMeals = exists
+      ? list.filter(id => id !== mealId)
+      : [...list, mealId];
+
+    const updated = {
+      ...dailyLog,
+      completed_meal_ids: updatedMeals
+    };
+    setDailyLog(updated);
+    await dataService.updateDailyLog(updated);
   };
 
   const handleToggleExercise = (exerciseId: string) => {
@@ -315,6 +342,159 @@ export const ClientPortal: React.FC = () => {
               <span className="font-semibold text-emerald-400">Pauta del coach:</span> {nutrition.notes}
             </div>
           )}
+
+          {/* PLAN DETALLADO DE COMIDAS DEL DÍA */}
+          {nutrition?.diet_days && nutrition.diet_days.length > 0 && (() => {
+            const currentDay = nutrition.diet_days[activeClientDayIndex] || nutrition.diet_days[0];
+            const completedCount = currentDay.meals?.filter(m => dailyLog.completed_meal_ids?.includes(m.id)).length || 0;
+            const totalCount = currentDay.meals?.length || 0;
+            const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+            return (
+              <div className="space-y-3 pt-2 border-t border-slate-800/80">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Utensils className="h-4 w-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      Tu Menú y Comidas
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    {completedCount} de {totalCount} comidas ({percent}%)
+                  </span>
+                </div>
+
+                {/* Selector de Días si hay más de 1 */}
+                {nutrition.diet_days.length > 1 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                    {nutrition.diet_days.map((d, dIdx) => (
+                      <button
+                        key={d.id || dIdx}
+                        type="button"
+                        onClick={() => setActiveClientDayIndex(dIdx)}
+                        className={`px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
+                          activeClientDayIndex === dIdx
+                            ? 'bg-emerald-500 text-slate-950 font-bold'
+                            : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white'
+                        }`}
+                      >
+                        {d.day_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Barra de progreso de comidas */}
+                <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                  <div
+                    className="bg-emerald-500 h-full transition-all duration-300"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+
+                {/* Lista de Comidas */}
+                <div className="space-y-2.5">
+                  {currentDay.meals?.map((m) => {
+                    const isMealDone = Boolean(dailyLog.completed_meal_ids?.includes(m.id));
+                    const mealKcal = m.foods?.reduce((sum, f) => sum + (Number(f.calories) || 0), 0) || 0;
+                    const mealProt = m.foods?.reduce((sum, f) => sum + (Number(f.protein_g) || 0), 0) || 0;
+                    const mealCarb = m.foods?.reduce((sum, f) => sum + (Number(f.carbs_g) || 0), 0) || 0;
+                    const mealFat = m.foods?.reduce((sum, f) => sum + (Number(f.fat_g) || 0), 0) || 0;
+
+                    return (
+                      <div
+                        key={m.id}
+                        className={`rounded-xl border p-3 transition-all ${
+                          isMealDone
+                            ? 'bg-emerald-500/5 border-emerald-500/40'
+                            : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
+                        }`}
+                      >
+                        {/* Cabecera de la comida */}
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleMeal(m.id)}
+                              className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                                isMealDone
+                                  ? 'bg-emerald-500 border-emerald-500 text-slate-950 font-bold'
+                                  : 'border-slate-700 bg-slate-900 hover:border-emerald-500'
+                              }`}
+                              title={isMealDone ? 'Desmarcar comida' : 'Marcar como consumida'}
+                            >
+                              {isMealDone && <Check className="h-3.5 w-3.5" />}
+                            </button>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-bold ${isMealDone ? 'line-through text-slate-400' : 'text-slate-100'}`}>
+                                  {m.name || `Comida ${m.meal_number}`}
+                                </span>
+                                {m.time_suggested && (
+                                  <span className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
+                                    <Clock className="h-2.5 w-2.5" /> {m.time_suggested}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 font-mono text-[10px]">
+                            <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-200 border border-slate-800">
+                              {mealKcal} kcal
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              {mealProt}g P
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                              {mealCarb}g C
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              {mealFat}g G
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Alimentos de la comida */}
+                        {m.foods && m.foods.length > 0 ? (
+                          <div className="pl-7 space-y-1">
+                            {m.foods.map((food, fIdx) => (
+                              <div
+                                key={food.id || fIdx}
+                                className="flex items-center justify-between text-[11px] text-slate-300 py-0.5 border-t border-slate-900 first:border-none"
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500">•</span>
+                                  <span className={isMealDone ? 'line-through text-slate-500' : 'text-slate-200'}>
+                                    {food.name}
+                                  </span>
+                                  {food.portion && (
+                                    <span className="text-[10px] text-slate-400 font-mono">
+                                      ({food.portion})
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
+                                  <span>{food.calories} kcal</span>
+                                  <span className="text-emerald-400 ml-1.5">{food.protein_g}P</span>
+                                  <span className="text-sky-400 ml-1">{food.carbs_g}C</span>
+                                  <span className="text-amber-400 ml-1">{food.fat_g}G</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="pl-7 text-[10px] text-slate-500 italic">
+                            Sin alimentos detallados para esta comida.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Checkboxes de Cumplimiento Diario (Requerimiento 3.2: Checkbox para confirmar si cumplió con la ingesta) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
