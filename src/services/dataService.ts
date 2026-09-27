@@ -9,6 +9,7 @@ import {
   ProgressLog,
   DailyNutritionLog,
   MonthlyLoginStat,
+  TeamAdherenceStats,
 } from '../types/database';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -705,6 +706,113 @@ export const dataService = {
     if (item) {
       item.completed = completed;
       item.completed_at = completed ? new Date().toISOString() : null;
+    }
+  },
+
+  // Obtener estadísticas agregadas de adherencia y cumplimiento del equipo
+  async getTeamAdherence(_trainerId: string, clientIds: string[]): Promise<TeamAdherenceStats> {
+    if (this.isDemoMode) {
+      return {
+        overallAdherence: 88,
+        workoutsCompleted: 22,
+        workoutsTotal: 25,
+        workoutRate: 88,
+        nutritionRate: 84,
+        nutritionMet: 21,
+        nutritionTotal: 25,
+        checkinsReceived: 2,
+        checkinsTotal: 3,
+        hasRealData: true,
+      };
+    }
+
+    if (!clientIds || clientIds.length === 0) {
+      return {
+        overallAdherence: 0,
+        workoutsCompleted: 0,
+        workoutsTotal: 0,
+        workoutRate: 0,
+        nutritionRate: 0,
+        nutritionMet: 0,
+        nutritionTotal: 0,
+        checkinsReceived: 0,
+        checkinsTotal: 0,
+        hasRealData: false,
+      };
+    }
+
+    try {
+      // 1. Asignaciones de rutinas para los clientes del entrenador
+      const { data: assignments } = await supabase
+        .from('workout_assignments')
+        .select('id, client_id, completed')
+        .in('client_id', clientIds);
+
+      // 2. Registros diarios de nutrición (últimos 7 días)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const dateStr = sevenDaysAgo.toISOString().split('T')[0];
+
+      const { data: dailyLogs } = await supabase
+        .from('daily_nutrition_logs')
+        .select('id, client_id, calories_met, protein_met')
+        .in('client_id', clientIds)
+        .gte('date', dateStr);
+
+      // 3. Check-ins de progreso (últimos 7 días)
+      const { data: progressLogs } = await supabase
+        .from('progress_logs')
+        .select('id, client_id, date')
+        .in('client_id', clientIds)
+        .gte('date', dateStr);
+
+      const workoutsTotal = assignments?.length || 0;
+      const workoutsCompleted = assignments?.filter(a => a.completed).length || 0;
+      const workoutRate = workoutsTotal > 0 ? Math.round((workoutsCompleted / workoutsTotal) * 100) : 0;
+
+      const nutritionTotal = dailyLogs?.length || 0;
+      const nutritionMet = dailyLogs?.filter(l => l.calories_met && l.protein_met).length || 0;
+      const nutritionRate = nutritionTotal > 0 ? Math.round((nutritionMet / nutritionTotal) * 100) : 0;
+
+      const checkinsTotal = clientIds.length;
+      const uniqueCheckinClients = new Set(progressLogs?.map(p => p.client_id) || []).size;
+      const checkinRate = checkinsTotal > 0 ? Math.round((uniqueCheckinClients / checkinsTotal) * 100) : 0;
+
+      const validRates: number[] = [];
+      if (workoutsTotal > 0) validRates.push(workoutRate);
+      if (nutritionTotal > 0) validRates.push(nutritionRate);
+      if (checkinsTotal > 0 && uniqueCheckinClients > 0) validRates.push(checkinRate);
+
+      const overallAdherence = validRates.length > 0
+        ? Math.round(validRates.reduce((a, b) => a + b, 0) / validRates.length)
+        : 0;
+
+      return {
+        overallAdherence,
+        workoutsCompleted,
+        workoutsTotal,
+        workoutRate,
+        nutritionRate,
+        nutritionMet,
+        nutritionTotal,
+        checkinsReceived: uniqueCheckinClients,
+        checkinsTotal,
+        hasRealData: workoutsTotal > 0 || nutritionTotal > 0 || uniqueCheckinClients > 0,
+      };
+    } catch (e) {
+      console.warn('Error al calcular adherencia del equipo:', e);
+      return {
+        overallAdherence: 0,
+        workoutsCompleted: 0,
+        workoutsTotal: 0,
+        workoutRate: 0,
+        nutritionRate: 0,
+        nutritionMet: 0,
+        nutritionTotal: 0,
+        checkinsReceived: 0,
+        checkinsTotal: clientIds.length,
+        hasRealData: false,
+      };
     }
   },
 

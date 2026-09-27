@@ -120,3 +120,16 @@ export interface DailyNutritionLog {
   completed_meal_ids?: string[];
   notes?: string;
 }
+
+export interface TeamAdherenceStats {
+  overallAdherence: number;
+  workoutsCompleted: number;
+  workoutsTotal: number;
+  workoutRate: number;
+  nutritionRate: number;
+  nutritionMet: number;
+  nutritionTotal: number;
+  checkinsReceived: number;
+  checkinsTotal: number;
+  hasRealData: boolean;
+}

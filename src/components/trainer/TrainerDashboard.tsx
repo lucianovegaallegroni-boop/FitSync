@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { dataService, INITIAL_DEMO_PROGRESS } from '../../services/dataService';
-import { Profile, Workout, ProgressLog, NutritionGoal, DayDietPlan, MealSlot, MealFoodItem } from '../../types/database';
+import { Profile, Workout, ProgressLog, NutritionGoal, DayDietPlan, MealSlot, MealFoodItem, TeamAdherenceStats } from '../../types/database';
 import { exportNutritionPlanToPDF } from '../../utils/pdfExport';
 
 function createDefaultMeals(count: number): MealSlot[] {
@@ -73,6 +73,18 @@ export const TrainerDashboard: React.FC = () => {
   const [clientProgress, setClientProgress] = useState<ProgressLog[]>([]);
   const [clientNutrition, setClientNutrition] = useState<NutritionGoal | null>(null);
   const [clientSearch, setClientSearch] = useState('');
+  const [teamStats, setTeamStats] = useState<TeamAdherenceStats>({
+    overallAdherence: 0,
+    workoutsCompleted: 0,
+    workoutsTotal: 0,
+    workoutRate: 0,
+    nutritionRate: 0,
+    nutritionMet: 0,
+    nutritionTotal: 0,
+    checkinsReceived: 0,
+    checkinsTotal: 0,
+    hasRealData: false,
+  });
 
   // Estados de formularios y modales
   const [showAddClientModal, setShowAddClientModal] = useState(false);
@@ -143,10 +155,61 @@ export const TrainerDashboard: React.FC = () => {
     setClients(uniqueClients);
     setWorkouts(uniqueWorkouts);
 
+    // Calcular estadísticas reales de adherencia del equipo
+    const clientIds = uniqueClients.map(c => c.id);
+    const adherence = await dataService.getTeamAdherence(profile.id, clientIds);
+    setTeamStats(adherence);
+
     if (uniqueClients.length > 0 && !selectedClient) {
       handleSelectClient(uniqueClients[0]);
     }
   };
+
+  // Distribución dinámica de objetivos según los clientes reales del entrenador
+  const goalsDistribution = useMemo(() => {
+    if (isDemoMode) {
+      return [
+        { label: 'Pérdida de Grasa & Definición', count: 1, percent: 33, color: 'bg-amber-400' },
+        { label: 'Hipertrofia & Ganancia Muscular', count: 1, percent: 33, color: 'bg-emerald-400' },
+        { label: 'Tonificación & Rendimiento', count: 1, percent: 33, color: 'bg-sky-400' },
+      ];
+    }
+
+    if (clients.length === 0) {
+      return [];
+    }
+
+    let fatLoss = 0;
+    let hypertrophy = 0;
+    let toning = 0;
+    let general = 0;
+
+    clients.forEach((c) => {
+      const g = (c.goals || '').toLowerCase();
+      if (/grasa|peso|defin|adelgaz|bajar|perder/.test(g)) {
+        fatLoss++;
+      } else if (/hipertrofia|muscul|volumen|fuerza|masa/.test(g)) {
+        hypertrophy++;
+      } else if (/tonific|resistencia|salud|rendimiento|cardio/.test(g)) {
+        toning++;
+      } else {
+        general++;
+      }
+    });
+
+    const total = clients.length;
+    const res = [
+      { label: 'Pérdida de Grasa & Definición', count: fatLoss, percent: Math.round((fatLoss / total) * 100), color: 'bg-amber-400' },
+      { label: 'Hipertrofia & Ganancia Muscular', count: hypertrophy, percent: Math.round((hypertrophy / total) * 100), color: 'bg-emerald-400' },
+      { label: 'Tonificación & Rendimiento', count: toning, percent: Math.round((toning / total) * 100), color: 'bg-sky-400' },
+    ];
+
+    if (general > 0) {
+      res.push({ label: 'Salud General & Otros', count: general, percent: Math.round((general / total) * 100), color: 'bg-purple-400' });
+    }
+
+    return res;
+  }, [clients, isDemoMode]);
 
   const handleSelectClient = async (c: Profile) => {
     setSelectedClient(c);
@@ -289,10 +352,12 @@ export const TrainerDashboard: React.FC = () => {
 
   const handleAssignWorkout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!assignClientId || !assignWorkoutId) return;
+    if (!assignClientId || !assignWorkoutId || !profile) return;
     await dataService.assignWorkout(assignClientId, assignWorkoutId, new Date().toISOString().split('T')[0]);
     setAssignSuccess(true);
     setTimeout(() => setAssignSuccess(false), 3000);
+    const clientIds = clients.map(c => c.id);
+    dataService.getTeamAdherence(profile.id, clientIds).then(setTeamStats);
   };
 
   const handleChangeMealsPerDay = (newCount: number) => {
@@ -551,7 +616,9 @@ export const TrainerDashboard: React.FC = () => {
           </div>
           <div>
             <p className="text-xs text-slate-400 font-medium">Cumplimiento Semanal</p>
-            <p className="text-2xl font-bold text-emerald-400 mt-0.5">88%</p>
+            <p className="text-2xl font-bold text-emerald-400 mt-0.5">
+              {teamStats.hasRealData || isDemoMode ? `${teamStats.overallAdherence}%` : '0%'}
+            </p>
           </div>
         </div>
 
@@ -872,33 +939,62 @@ export const TrainerDashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Adherencia del Equipo</span>
                   <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
-                    Semana Actual
+                    {isDemoMode ? 'Semana Actual' : 'Datos en Vivo'}
                   </span>
                 </div>
 
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold text-white">88%</span>
-                  <span className="text-xs text-emerald-400 font-medium flex items-center">
-                    <TrendingUp className="h-3.5 w-3.5 mr-0.5" /> +4% vs mes anterior
+                  <span className="text-3xl font-extrabold text-white">
+                    {teamStats.hasRealData || isDemoMode ? `${teamStats.overallAdherence}%` : '0%'}
                   </span>
+                  {isDemoMode ? (
+                    <span className="text-xs text-emerald-400 font-medium flex items-center">
+                      <TrendingUp className="h-3.5 w-3.5 mr-0.5" /> +4% vs mes anterior
+                    </span>
+                  ) : teamStats.hasRealData ? (
+                    <span className="text-xs text-emerald-400 font-medium flex items-center">
+                      <TrendingUp className="h-3.5 w-3.5 mr-0.5" /> Promedio semanal
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-500 font-medium">
+                      Sin actividad registrada aún
+                    </span>
+                  )}
                 </div>
 
                 <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
-                  <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full" style={{ width: '88%' }}></div>
+                  <div
+                    className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(teamStats.hasRealData || isDemoMode ? teamStats.overallAdherence : 0, 0))}%` }}
+                  ></div>
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-slate-800 text-xs">
                   <div className="flex justify-between text-slate-300">
                     <span className="text-slate-400">Entrenamientos realizados:</span>
-                    <span className="font-semibold text-white">22 de 25</span>
+                    <span className="font-semibold text-white">
+                      {isDemoMode
+                        ? '22 de 25'
+                        : `${teamStats.workoutsCompleted} de ${teamStats.workoutsTotal}`}
+                    </span>
                   </div>
                   <div className="flex justify-between text-slate-300">
                     <span className="text-slate-400">Metas de macros cumplidas:</span>
-                    <span className="font-semibold text-white">84%</span>
+                    <span className="font-semibold text-white">
+                      {isDemoMode
+                        ? '84%'
+                        : teamStats.nutritionTotal > 0
+                        ? `${teamStats.nutritionRate}% (${teamStats.nutritionMet}/${teamStats.nutritionTotal})`
+                        : '0%'}
+                    </span>
                   </div>
                   <div className="flex justify-between text-slate-300">
                     <span className="text-slate-400">Check-ins semanales recibidos:</span>
-                    <span className="font-semibold text-white">2 de 3</span>
+                    <span className="font-semibold text-white">
+                      {isDemoMode
+                        ? '2 de 3'
+                        : `${teamStats.checkinsReceived} de ${teamStats.checkinsTotal}`}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -911,35 +1007,28 @@ export const TrainerDashboard: React.FC = () => {
                 </div>
 
                 <div className="space-y-2.5 pt-1 text-xs">
-                  <div>
-                    <div className="flex justify-between text-slate-300 mb-1">
-                      <span>Pérdida de Grasa & Definición</span>
-                      <span className="font-bold text-white">1 atleta</span>
+                  {goalsDistribution.length > 0 ? (
+                    goalsDistribution.map((item, idx) => (
+                      <div key={idx}>
+                        <div className="flex justify-between text-slate-300 mb-1">
+                          <span>{item.label}</span>
+                          <span className="font-bold text-white">
+                            {item.count} {item.count === 1 ? 'atleta' : 'atletas'} ({item.percent}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className={`${item.color} h-full rounded-full transition-all duration-500`}
+                            style={{ width: `${Math.max(item.percent, item.count > 0 ? 5 : 0)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-slate-500 text-xs italic">
+                      No hay atletas asignados aún para calcular distribución de metas.
                     </div>
-                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-amber-400 h-full rounded-full" style={{ width: '33%' }}></div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-slate-300 mb-1">
-                      <span>Hipertrofia & Ganancia Muscular</span>
-                      <span className="font-bold text-white">1 atleta</span>
-                    </div>
-                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-emerald-400 h-full rounded-full" style={{ width: '33%' }}></div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-slate-300 mb-1">
-                      <span>Tonificación & Resistencia</span>
-                      <span className="font-bold text-white">1 atleta</span>
-                    </div>
-                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-sky-400 h-full rounded-full" style={{ width: '33%' }}></div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
