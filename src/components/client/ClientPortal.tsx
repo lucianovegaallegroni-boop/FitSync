@@ -14,11 +14,13 @@ import {
   Check,
   Award,
   Clock,
-  Utensils
+  Utensils,
+  Download
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { dataService } from '../../services/dataService';
 import { WorkoutAssignment, NutritionGoal, ProgressLog, DailyNutritionLog } from '../../types/database';
+import { exportNutritionPlanToPDF } from '../../utils/pdfExport';
 
 export const ClientPortal: React.FC = () => {
   const { profile } = useAuth();
@@ -111,6 +113,24 @@ export const ClientPortal: React.FC = () => {
     };
     setDailyLog(updated);
     await dataService.updateDailyLog(updated);
+  };
+
+  const handleExportPDF = () => {
+    if (!nutrition) return;
+    exportNutritionPlanToPDF({
+      clientName: profile?.full_name || 'Atleta FitSync',
+      clientEmail: profile?.email,
+      coachName: 'Entrenador FitSync',
+      nutrition: {
+        calories: nutrition.calories,
+        protein_g: nutrition.protein_g,
+        carbs_g: nutrition.carbs_g,
+        fat_g: nutrition.fat_g,
+        meals_per_day: nutrition.meals_per_day,
+        notes: nutrition.notes,
+        diet_days: nutrition.diet_days,
+      },
+    });
   };
 
   const handleAdjustWater = async (delta: number) => {
@@ -314,7 +334,7 @@ export const ClientPortal: React.FC = () => {
 
         {/* SECCIÓN 2: REGISTRO DE NUTRICIÓN DIARIO (REQUERIMIENTO 3.2 DEL PLAN) */}
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="h-9 w-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
                 <Apple className="h-5 w-5" />
@@ -324,16 +344,29 @@ export const ClientPortal: React.FC = () => {
                 <p className="text-xs text-slate-400">Meta: {nutrition?.calories || 2200} kcal</p>
               </div>
             </div>
-            <div className="flex gap-2 font-mono text-[11px]">
-              <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                {nutrition?.protein_g || 160}g P
-              </span>
-              <span className="px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                {nutrition?.carbs_g || 220}g C
-              </span>
-              <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                {nutrition?.fat_g || 65}g G
-              </span>
+
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <button
+                type="button"
+                onClick={handleExportPDF}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-colors"
+                title="Descargar o imprimir la dieta y metas en PDF"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Exportar PDF</span>
+              </button>
+
+              <div className="flex gap-1.5 font-mono text-[11px]">
+                <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  {nutrition?.protein_g || 160}g P
+                </span>
+                <span className="px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                  {nutrition?.carbs_g || 220}g C
+                </span>
+                <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  {nutrition?.fat_g || 65}g G
+                </span>
+              </div>
             </div>
           </div>
 

@@ -23,11 +23,13 @@ import {
   ArrowUpRight,
   Trash2,
   Utensils,
-  Copy
+  Copy,
+  Download
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { dataService, INITIAL_DEMO_PROGRESS } from '../../services/dataService';
 import { Profile, Workout, ProgressLog, NutritionGoal, DayDietPlan, MealSlot, MealFoodItem } from '../../types/database';
+import { exportNutritionPlanToPDF } from '../../utils/pdfExport';
 
 function createDefaultMeals(count: number): MealSlot[] {
   const defaultNamesMap: Record<number, string[]> = {
@@ -447,6 +449,24 @@ export const TrainerDashboard: React.FC = () => {
     setClientNutrition(updated);
     setNutritionSuccess(true);
     setTimeout(() => setNutritionSuccess(false), 3000);
+  };
+
+  const handleExportPDF = () => {
+    if (!selectedClient) return;
+    exportNutritionPlanToPDF({
+      clientName: selectedClient.full_name,
+      clientEmail: selectedClient.email,
+      coachName: profile?.full_name || 'Coach FitSync',
+      nutrition: {
+        calories: Number(macroCalories),
+        protein_g: Number(macroProtein),
+        carbs_g: Number(macroCarbs),
+        fat_g: Number(macroFat),
+        meals_per_day: Number(mealsPerDay),
+        notes: macroNotes,
+        diet_days: dietDays,
+      },
+    });
   };
 
   // Clientes sin registro en > 3 días (conforme a sección 3.1 del documento de proyecto)
@@ -1236,21 +1256,33 @@ export const TrainerDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Selector de Cliente Activo */}
-              <div className="flex items-center gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800 shrink-0">
-                <span className="text-xs text-slate-400 font-medium pl-2">Cliente:</span>
-                <select
-                  value={selectedClient?.id || ''}
-                  onChange={(e) => {
-                    const c = clients.find(cl => cl.id === e.target.value);
-                    if (c) handleSelectClient(c);
-                  }}
-                  className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-semibold focus:outline-none focus:border-emerald-500 cursor-pointer"
+              {/* Acciones de Cabecera: Exportar PDF y Selector de Cliente */}
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleExportPDF}
+                  className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold px-3.5 py-2 rounded-xl text-xs transition-colors shadow-sm"
+                  title="Descargar o imprimir el plan nutricional en formato PDF"
                 >
-                  {clients.map(c => (
-                    <option key={c.id} value={c.id}>{c.full_name}</option>
-                  ))}
-                </select>
+                  <Download className="h-4 w-4" />
+                  <span>Exportar como PDF</span>
+                </button>
+
+                <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+                  <span className="text-xs text-slate-400 font-medium pl-2">Cliente:</span>
+                  <select
+                    value={selectedClient?.id || ''}
+                    onChange={(e) => {
+                      const c = clients.find(cl => cl.id === e.target.value);
+                      if (c) handleSelectClient(c);
+                    }}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-semibold focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id}>{c.full_name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
