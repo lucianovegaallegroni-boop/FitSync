@@ -18,7 +18,8 @@ import {
   Phone,
   BarChart3,
   Award,
-  Shield
+  Shield,
+  ArrowDown
 } from 'lucide-react';
 import { Profile, MonthlyLoginStat, UserRole } from '../../types/database';
 import { dataService } from '../../services/dataService';
@@ -217,6 +218,17 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Desplazar la pantalla suavemente hacia la tabla de usuarios pendientes
+  const scrollToPendingUsers = () => {
+    setStatusFilter('pending');
+    setTimeout(() => {
+      const tableElem = document.getElementById('tabla-usuarios');
+      if (tableElem) {
+        tableElem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 60);
+  };
+
   // Valor máximo para la escala del gráfico
   const rawPeak = loginStats.length > 0 ? Math.max(...loginStats.map((s) => s.logins), 1) : 10;
   const maxLogins = rawPeak > 50 ? Math.ceil(rawPeak / 50) * 50 : Math.max(Math.ceil(rawPeak / 5) * 5, 5);
@@ -289,10 +301,11 @@ export const AdminDashboard: React.FC = () => {
             </span>
           </div>
           <button
-            onClick={() => setStatusFilter('pending')}
-            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs whitespace-nowrap self-start sm:self-auto transition-colors shadow-md shadow-amber-500/20"
+            onClick={scrollToPendingUsers}
+            className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs whitespace-nowrap self-start sm:self-auto transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5 active:scale-95"
           >
-            Ver Pendientes ({pendingActivationCount})
+            <span>Ver Pendientes ({pendingActivationCount})</span>
+            <ArrowDown className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
@@ -332,17 +345,26 @@ export const AdminDashboard: React.FC = () => {
           <p className="text-[11px] text-slate-500 mt-1">Clientes con acceso activo</p>
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
+        <div
+          onClick={scrollToPendingUsers}
+          title="Ver usuarios pendientes de activación"
+          className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-amber-500/50 hover:bg-slate-800/60 cursor-pointer transition-all"
+        >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-slate-400">Pendientes / Inactivos</span>
-            <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <span className="text-xs font-medium text-slate-400 group-hover:text-amber-300 transition-colors">Pendientes / Inactivos</span>
+            <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
               <Clock className="h-4 w-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-amber-400">{pendingActivationCount + inactiveUsersCount}</div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            {pendingActivationCount} pendientes • {inactiveUsersCount} desactivados
-          </p>
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-[11px] text-slate-500">
+              {pendingActivationCount} pendientes • {inactiveUsersCount} desactivados
+            </p>
+            <span className="text-[10px] text-amber-400/90 group-hover:text-amber-300 font-semibold underline underline-offset-2 flex items-center gap-0.5">
+              Ir a pendientes ↓
+            </span>
+          </div>
         </div>
 
         <div className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
@@ -526,7 +548,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* User Directory & Control Table */}
-      <div className="bg-slate-900/90 border border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+      <div id="tabla-usuarios" className="bg-slate-900/90 border border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 scroll-mt-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
