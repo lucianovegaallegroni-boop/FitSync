@@ -134,7 +134,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, pass: string) => {
-    setLoading(true);
     const emailNorm = email.trim().toLowerCase();
 
     // 1. Verificar si el usuario existe y su estado de activación
@@ -142,7 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Caso A: El usuario no existe en la base de datos ni en el sistema
     if (!status.exists) {
-      setLoading(false);
       return {
         error: new Error(`No existe ningún usuario registrado con el correo "${email.trim()}". Por favor verifica que esté bien escrito o regístrate en la plataforma.`)
       };
@@ -150,7 +148,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Caso B: El usuario existe pero su cuenta aún no está activada o fue suspendida
     if (status.isActive === false) {
-      setLoading(false);
       if (status.isPending) {
         return {
           error: new Error('Tu cuenta aún no ha sido activada por un administrador. Debes esperar a que sea aprobada antes de poder ingresar.')
@@ -169,7 +166,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const matchedProfile = allUsers.find(u => u.email.toLowerCase() === emailNorm);
       if (matchedProfile) {
         if (matchedProfile.is_active === false) {
-          setLoading(false);
           const isPending = matchedProfile.deactivation_reason?.toLowerCase().includes('pendiente');
           return {
             error: new Error(
@@ -183,7 +179,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser({ id: matchedProfile.id, email: matchedProfile.email });
         setProfile(matchedProfile);
         await dataService.recordLogin(matchedProfile.id, matchedProfile.email, matchedProfile.role);
-        setLoading(false);
         return { error: null };
       }
     }
@@ -191,7 +186,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 3. Cuenta de prueba admin
     if (emailNorm === 'admin@fitsync.com') {
       if (pass !== 'admin123') {
-        setLoading(false);
         return {
           error: new Error('La contraseña ingresada es incorrecta. Por favor verifica tu clave e inténtalo nuevamente.')
         };
@@ -200,7 +194,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser({ id: 'admin-1', email: 'admin@fitsync.com' });
       setProfile(DEMO_ADMIN_PROFILE);
       await dataService.recordLogin('admin-1', 'admin@fitsync.com', 'admin');
-      setLoading(false);
       return { error: null };
     }
 
@@ -211,11 +204,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (error) {
-      setLoading(false);
       const msg = error.message?.toLowerCase() || '';
+      const code = (error as any).code || '';
+
+      if (code === 'email_not_confirmed' || msg.includes('email not confirmed') || msg.includes('not confirmed')) {
+        return {
+          error: new Error('Debes confirmar tu correo electrónico antes de ingresar. Por favor revisa tu bandeja de entrada o spam para activar tu cuenta.')
+        };
+      }
+
       const isCredsError = msg.includes('invalid login credentials') ||
                            msg.includes('invalid credentials') ||
-                           (error as any).code === 'invalid_credentials';
+                           code === 'invalid_credentials';
       
       // Al haber confirmado previamente que el usuario SÍ existe y SÍ está activo, la falla es por contraseña errónea
       if (isCredsError) {
@@ -239,7 +239,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await supabase.auth.signOut();
         setUser(null);
         setProfile(null);
-        setLoading(false);
         const isPending = userProfile.deactivation_reason && userProfile.deactivation_reason.toLowerCase().includes('pendiente');
         const reasonMsg = isPending
           ? 'Tu cuenta aún no ha sido activada por un administrador. Debes esperar a que sea aprobada antes de poder ingresar.'
@@ -250,18 +249,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       setIsDemoMode(false);
+      setUser(authData.user);
       if (userProfile) {
         setProfile(userProfile);
         await dataService.recordLogin(userProfile.id, userProfile.email, userProfile.role);
       }
     }
 
-    setLoading(false);
     return { error: null };
   };
 
   const signup = async (email: string, pass: string, fullName: string, role: UserRole) => {
-    setLoading(true);
     const emailNorm = email.trim().toLowerCase();
 
     const { data, error } = await supabase.auth.signUp({
@@ -276,7 +274,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (error) {
-      setLoading(false);
       return { error };
     }
 

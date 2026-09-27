@@ -30,11 +30,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     try {
       if (isLogin) {
         const { error } = await login(email, password);
-        if (error) throw error;
+        if (error) {
+          setErrorMsg(error.message || 'Error al autenticar');
+          return;
+        }
         onClose();
       } else {
         const { error } = await signup(email, password, fullName, role);
-        if (error) throw error;
+        if (error) {
+          setErrorMsg(error.message || 'Error al registrar la cuenta');
+          return;
+        }
         setSuccessMsg('¡Cuenta registrada! Tu acceso está pendiente de activación por un administrador antes de ingresar.');
         setTimeout(() => {
           setIsLogin(true);

@@ -38,10 +38,16 @@ export const LandingPage: React.FC = () => {
     try {
       if (isLogin) {
         const { error } = await login(email, password);
-        if (error) throw error;
+        if (error) {
+          setErrorMsg(error.message || 'Error al autenticar con el servidor');
+          return;
+        }
       } else {
         const { error } = await signup(email, password, fullName, role);
-        if (error) throw error;
+        if (error) {
+          setErrorMsg(error.message || 'Error al registrar la cuenta');
+          return;
+        }
         setSuccessMsg('¡Cuenta registrada! Tu cuenta ha sido creada y se encuentra pendiente de activación por un administrador para poder ingresar.');
         setTimeout(() => {
           setIsLogin(true);
@@ -49,7 +55,7 @@ export const LandingPage: React.FC = () => {
         }, 4000);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al autenticar con el servidor');
+      setErrorMsg(err.message || 'Error inesperado al conectar con el servidor');
     } finally {
       setLoading(false);
     }
